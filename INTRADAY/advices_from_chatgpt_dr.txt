@@ -1,0 +1,12 @@
+Monitor Feature Importance: Continuously monitor which features the model relies on 
+(e.g. feature importance in Random Forest/XGBoost). 
+If the model’s top features shift dramatically day-to-day or include many low-importance ones, 
+it may be overfitting. Focus on a stable set of features that consistently add value, 
+and eliminate those that don’t. This streamlining makes the model more robust in live trading.
+
+
+A longer test horizon increases the chance of catching different regimes 
+and reduces overfitting to any single period​
+
+ Another best practice is cross-validation tailored for time series (such as purged walk-forward cross-validation) 
+ to produce multiple out-of-sample evaluations

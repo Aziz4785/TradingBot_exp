@@ -1,0 +1,143 @@
+How to Fix the Second Code:
+
+The core issue is that you're trying to access app.data before it's guaranteed to be fully populated. Here's a more robust solution that introduces a mechanism to wait for data:
+
+
+from ibapi.client import EClient
+from ibapi.wrapper import EWrapper
+from ibapi.contract import Contract
+import pandas as pd
+import threading
+import time
+from copy import deepcopy
+import numpy as np
+
+class TradeApp(EWrapper, EClient):
+    def __init__(self):
+        EClient.__init__(self, self)
+        self.data = {}
+        self.data_received = {}  # Track if data has been received for a reqId
+
+    def historicalData(self, reqId, bar):
+        if reqId not in self.data:
+            self.data[reqId] = []
+            self.data_received[reqId] = False
+        self.data[reqId].append({"Date": bar.date, "Open": bar.open, "High": bar.high, "Low": bar.low, "Close": bar.close, "Volume": bar.volume})
+
+    def historicalDataEnd(self, reqId, start, end):
+        super().historicalDataEnd(reqId, start, end)
+        self.data_received[reqId] = True
+        print(f"HistoricalDataEnd. ReqId: {reqId}, {start}, {end}")
+
+
+def usTechStk(symbol, sec_type="STK", currency="USD", exchange="ISLAND"):
+    contract = Contract()
+    contract.symbol = symbol
+    contract.secType = sec_type
+    contract.currency = currency
+    contract.exchange = exchange
+    return contract
+
+
+def histData(app, req_num, contract, duration, candle_size):
+    """extracts historical data"""
+    app.reqHistoricalData(
+        reqId=req_num,
+        contract=contract,
+        endDateTime="",
+        durationStr=duration,
+        barSizeSetting=candle_size,
+        whatToShow="ADJUSTED_LAST",
+        useRTH=1,
+        formatDate=1,
+        keepUpToDate=0,
+        chartOptions=[],
+    )  # EClient function to request contract details
+
+
+def websocket_con(app):
+    app.run()
+
+
+def wait_for_data(app, reqId):
+    # Wait until data is received or a timeout occurs
+    timeout = 60  # seconds
+    start_time = time.time()
+    while not app.data_received.get(reqId, False):
+        time.sleep(0.1)
+        if time.time() - start_time > timeout:
+            print(f"Timeout waiting for data for reqId: {reqId}")
+            return False
+    return True
+
+
+app = TradeApp()
+app.connect(host="127.0.0.1", port=7497, clientId=23)
+con_thread = threading.Thread(target=websocket_con, args=(app,), daemon=True)
+con_thread.start()
+time.sleep(1)  # some latency added to ensure that the connection is established
+
+tickers = ["META", "AMZN", "INTC", "MSFT", "AAPL"]
+app.data_received = {tickers.index(ticker): False for ticker in tickers}
+
+for ticker in tickers:
+    try:
+        reqId = tickers.index(ticker)
+        histData(app, reqId, usTechStk(ticker), "1 Y", "15 mins")
+        if wait_for_data(app, reqId):
+            print(f"Data received for {ticker}")
+        else:
+            print(f"Data NOT received for {ticker}")
+    except Exception as e:
+        print(e)
+        print(f"Unable to extract data for {ticker}")
+
+###################storing trade app object in dataframe#######################
+def dataDataframe(symbols, TradeApp_obj):
+    "returns extracted historical data in dataframe format"
+    df_data = {}
+    for symbol in symbols:
+        reqId = symbols.index(symbol)
+        if reqId in TradeApp_obj.data:
+            df_data[symbol] = pd.DataFrame(TradeApp_obj.data[reqId])
+            df_data[symbol].set_index("Date", inplace=True)
+        else:
+            print(f"No data available for {symbol} (reqId: {reqId})")
+    return df_data
+
+###############################################################################
+
+# ... (rest of your functions: MACD, stochOscltr, atr, CAGR, volatility, sharpe, max_dd)
+
+# extract and store historical data in dataframe
+historicalData = dataDataframe(tickers, app)
+print(historicalData)
+
+# ... (rest of your backtesting code)
+Key Changes and Explanations:
+
+data_received Dictionary:
+Added a dictionary data_received in the TradeApp class.
+It keeps track of whether the historicalDataEnd callback has been called for each reqId, indicating that all data for that request has been received.
+Initialized to False for all tickers at the beginning.
+historicalDataEnd Callback:
+This callback is triggered by the API when all data for a request is sent.
+Sets the corresponding data_received[reqId] to True.
+wait_for_data Function:
+This function takes the app object and reqId as input.
+It waits in a loop until app.data_received[reqId] becomes True or a timeout occurs.
+It returns True if data is received, False otherwise.
+Looping through Tickers:
+After calling histData, the code now calls wait_for_data to ensure that the data has been received before moving to the next ticker.
+A print statement indicates whether data was successfully received or not.
+dataDataframe Modification:
+The function now checks if reqId is present as a key in TradeApp_obj.data before attempting to create the DataFrame.
+If the key is not present (data wasn't received), it prints a message indicating that no data is available for that symbol.
+Removed Extra time.sleep: Removed the time.sleep(5) as the wait_for_data function now handles waiting.
+Additional Tips:
+
+Error Handling: The try-except block around your histData calls is good. You might want to add more specific error handling (e.g., checking for network errors or invalid contract errors).
+Logging: Consider using Python's logging module to log important events, warnings, and errors. This will help with debugging.
+Timeout: Adjust the timeout in the wait_for_data function if needed.
+Rate Limiting: Be aware of the IB API's rate limits. If you're making too many requests in a short period, you might get throttled. The time.sleep() in the first version implicitly dealt with this to some extent. With the new code, you don't need to sleep between requests unless you are requesting very large datasets at very high frequency.
+By incorporating these changes, your code will be much more robust and handle the asynchronous nature of the IB API correctly, preventing the KeyError: 1 and ensuring that you only work with data that has been fully received. Remember to test it thoroughly with your IB Gateway or TWS.
