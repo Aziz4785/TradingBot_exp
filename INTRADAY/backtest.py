@@ -37,15 +37,19 @@ from SuperModel import *
 import matplotlib.pyplot as plt
 pd.options.display.max_rows = None
 
-config_path = "old_stuff10/models_to_use.json"
-models_dir  = "old_stuff10/allmodels"
-scalers_dir = "old_stuff10/allscalers"
-clean_path = "old_stuff10/clean.csv"
-bins_file = "old_stuff10/bins_json.json"
-start_date = "2025-02-06"
-end_date   = "2025-03-17"
+config_path = "models_to_use.json"
+models_dir  = "allmodels"
+scalers_dir = "allscalers"
+clean_path = "clean.csv"
+bins_file = "bins_json.json"
+start_date = "2025-02-10"
+end_date   = "2025-03-21"
+# with open('available_features_by_stock.json') as f:
+#     available_features_by_stock = json.load(f)
+
 from datetime import datetime, timedelta
 cutoff_date0125 = datetime(2025, 1, 1)
+cutoff_date0924 = datetime(2024, 9, 1)
 clean_df = pd.read_csv(clean_path)
 clean_df = clean_df.sample(frac=1).reset_index(drop=True)
 clean_df.drop_duplicates(inplace=True)
@@ -193,17 +197,23 @@ for ticker in tickers:
     
     df = add_daily_returns(df)
     df = add_PM_columns(df)
+    #print("df columns : ",df.columns)
     df = add_AH_columns(df)
     df = calculate_emas(df)
+    df = calculate_stds(df)
+    df = add_shifted_fractional_diff_from_DEPRADO(df)
     df = add_volatilities(df)
-    df = add_momentum(df)
+    df["mom_5"] = add_momentum(df, ticker)
+    #print("df columns before calling additional_ratios: ",df.columns)
     df = additional_ratios(df)
     df = additional_Close_ratios(df)
+    #print("df columns before calling additional_PM_ratios: ",df.columns)
     df = additional_PM_ratios(df)
     df = calculate_slopes(df)
     #TODO ADD a boolean to see if there is a local minima on the  dayHigh_3
 
     df = calculate_ema_ratios(df)
+    df = calculate_highs_and_lows(df)
     df = df.loc[start_date:end_date]
     df.drop("day", axis=1, inplace=True)
     df = df[df['market_time'] == 'RTH']
@@ -245,6 +255,7 @@ for ticker in tickers:
         # Build the input dictionary with the discretized feature names.
         input_data = {}
         row_features['date_after_0125'] = int(pd.to_datetime(idx) > cutoff_date0125)
+        row_features['date_after_0924'] = int(pd.to_datetime(idx) > cutoff_date0924)
 
         input_data = {col: row_features[col] for col in six_bins_columns}
         input_data["day_of_week"] = row_features["day_of_week"]

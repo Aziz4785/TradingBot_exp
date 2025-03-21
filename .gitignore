@@ -22,3 +22,5 @@ venv/
 
 old_stuff*/
 !old_stuff_analysis/
+
+raw_before_clean.py

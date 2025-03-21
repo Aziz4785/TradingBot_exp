@@ -9,7 +9,7 @@ folders = [f for f in os.listdir(root_dir)
           if os.path.isdir(os.path.join(root_dir, f))
           and f.startswith("old_stuff")
           and f != "old_stuff_analysis"
-          and 6 <= int(f.replace("old_stuff", "")) <= 9]
+          and 6 <= int(f.replace("old_stuff", "")) <= 17]
 
 print("folders", folders)
 #old_stuff1 -> old_stuff5  (15 dernier jours de fevrier)
@@ -190,32 +190,49 @@ def count_model_types():
 if __name__ == "__main__":
     find_and_rank_features()
     feature_subsets = [
-        ['AH_max_1dayago_vs_prevDayClose_class','PM_min_to_Close_ratio_class','dayOpen_to_prev2DayOpen_ratio_class','day_of_week'],
-        ['PM_max_to_PM_min_ratio_class', 'Close_to_Close_1_day_ago_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_to_prevDayClose_ratio_class', 'AH_max_1dayago_to_Close_class', 'PM_max_vs_PM_max_1dayago_class', 'PM_min_to_Close_ratio_class', 'open_to_prev_close_class', 'PM_max_to_dayOpen_ratio_class', 'PM_time_diff_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_prevDayClose_class', 'dayOpen_to_prevDayClose_class', 'Close_to_prevDayOpen_class'],
-        ['dayOpen_to_prevDayOpen_ratio_class', 'dayOpen_to_prevDayClose_class', 'PM_time_diff_class', 'PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_vs_PM_max_1dayago_class', 'PM_max_to_dayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'PM_max_to_prevDayOpen_ratio_class', 'Close_to_open_ratio_class', 'dayOpen_to_prev2DayOpen_ratio_class'],
-        ['Close_to_prevDayClose_class', 'open_to_prev_close_class', 'AH_max_1dayago_to_Close_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_min_to_prevDayClose_ratio_class', 'PM_min_to_open_ratio_class', 'dayOpen_to_prevDayClose_class', 'PM_min_to_Close_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_to_prevDayClose_ratio_class', 'dayOpen_to_prevDayOpen_ratio_class'],
-        ['PM_min_to_prevDayOpen_ratio_class', 'Close_to_Close_1_day_ago_class', 'PM_max_to_Close_ratio_class', 'dayOpen_to_prevDayOpen_ratio_class', 'dayOpen_to_prevDayClose_class', 'AH_max_1dayago_vs_prevDayClose_class', 'return_2d_class', 'PM_min_to_Close_ratio_class', 'Close_to_prevDayClose_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'PM_min_to_open_ratio_class', 'day_of_week'],
-        ['PM_min_to_prevDayOpen_ratio_class', 'Close_to_Close_1_day_ago_class', 'AH_max_1dayago_vs_PM_max_class', 'PM_range_to_close_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'day_of_week', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_prevDayOpen_class', 'dayOpen_to_prevDayClose_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_max_to_dayOpen_ratio_class', 'AH_max_1dayago_to_Close_class', 'PM_time_diff_class', 'Close_to_open_ratio_class'],
-        ['day_of_week', 'open_to_prev_close_class', 'Close_to_prevDayOpen_class', 'PM_max_to_dayOpen_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_min_to_Close_ratio_class', 'PM_min_to_open_ratio_class', 'PM_max_to_prevDayOpen_ratio_class', 'AH_max_1dayago_vs_PM_max_class', 'Close_to_open_ratio_class'],
-        ['day_of_week', 'PM_min_to_prevDayClose_ratio_class', 'PM_time_diff_class', 'PM_range_to_close_ratio_class', 'PM_max_to_dayOpen_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_open_ratio_class', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_max_to_PM_min_ratio_class', 'Close_to_open_ratio_class', 'PM_min_to_Close_ratio_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_prevDayOpen_class'],
-        ['PM_range_to_close_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'high_quad_q_rel_class', 'day_of_week', 'Close_to_prevDayOpen_class', 'PM_max_to_dayOpen_ratio_class', 'AH_max_1dayago_to_Close_class', 'high_quad_p_rel_class', 'PM_min_to_prevDayOpen_ratio_class', 'Close_to_open_ratio_class', 'PM_max_to_Close_ratio_class', 'Close_to_prevDayClose_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_min_to_Close_ratio_class', 'time_in_minutes'],
-        ['dayOpen_to_prevDayClose_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'Close_to_open_ratio_class', 'PM_range_to_open_ratio_class', 'PM_range_to_close_ratio_class', 'Close_to_Close_1_day_ago_class', 'high_slope_rel_class', 'day_of_week', 'PM_max_to_PM_min_ratio_class', 'PM_time_diff_class', 'PM_max_to_prevDayClose_ratio_class'],
-        ['PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_max_to_PM_min_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'high_quad_p_rel_class', 'PM_time_diff_class', 'dayOpen_to_prevDayOpen_ratio_class', 'high_slope_rel_class', 'Close_to_open_ratio_class', 'AH_max_1dayago_vs_PM_max_class'],
-        ['Close_to_prevDayHigh_class', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_min_to_prevDayClose_ratio_class', 'high_slope_rel_class', 'AH_max_1dayago_to_Close_class', 'PM_max_vs_PM_max_1dayago_class', 'AH_max_1dayago_vs_PM_max_class', 'PM_max_to_prevDayOpen_ratio_class', 'day_of_week', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_EMA_48_class', 'PM_min_to_open_ratio_class', 'Close_to_Close_1_day_ago_class', 'Close_to_open_ratio_class', 'high_quad_p_rel_class'],
-        ['AH_max_1dayago_vs_PM_max_class', 'PM_range_to_open_ratio_class', 'high_quad_p_rel_class', 'AH_max_1dayago_vs_prevDayClose_class', 'Close_to_Close_1_day_ago_class', 'PM_max_to_dayOpen_ratio_class', 'high_slope_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'Close_to_prevDayHigh_class', 'dayOpen_to_prevDayOpen_ratio_class', 'dayOpen_to_prevDayClose_class'],
-        ['PM_min_to_prevDayClose_ratio_class', 'high_quad_q_rel_class'],
-        ['PM_max_vs_PM_max_1dayago_class', 'AH_max_1dayago_vs_prevDayClose_class', 'return_1d_to_return_2d_ratio_class'],
-        ['hist_close_ratio_class', 'high_slope_rel_class', 'open_to_prev_close_class'],
-        ['PM_max_to_prevDayClose_ratio_class', 'high_quad_q_rel_class', 'PM_min_to_prevDayOpen_ratio_class', 'AH_max_1dayago_vs_PM_max_class', 'high_quad_p_rel_class', 'PM_max_to_dayOpen_ratio_class'],
-        ['prev2DayClose_to_prevDayClose_ratio_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'PM_range_to_open_ratio_class', 'PM_time_diff_class', 'AH_max_1dayago_to_Close_class', 'PM_range_to_close_ratio_class', 'PM_max_to_dayOpen_ratio_class', 'PM_max_to_prevDayClose_ratio_class', 'Close_to_prevDayHigh_class', 'Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'PM_min_to_open_ratio_class'],
-        ['PM_min_to_Close_ratio_class', 'high_quad_q_rel_class', 'high_slope_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_max_to_Close_ratio_class', 'high_quad_p_rel_class', 'dayOpen_to_prevDayClose_class', 'Close_to_prevDayHigh_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_open_ratio_class', 'return_1d_to_return_2d_ratio_class', 'day_of_week'],
-        
-        ['AH_max_1dayago_vs_PM_max_class', 'AH_max_1dayago_to_Close_class', 'Close_to_prevDayClose_class', 'Close_to_Close_1_day_ago_class', 'time_in_minutes', 'day_of_week'],
-        ['PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'high_quad_p_rel_class'],
-        ['Close_to_prevDayClose_class', 'AH_max_1dayago_vs_PM_max_class'],
-        ]
+    ['PM_max_to_dayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','PM_time_diff_class','dayOpen_to_prev2DayOpen_ratio_class'],
+    ['AH_max_1dayago_vs_prevDayClose_class','PM_min_to_Close_ratio_class','dayOpen_to_prev2DayOpen_ratio_class','day_of_week'],
+    ['PM_max_to_PM_min_ratio_class', 'Close_to_Close_1_day_ago_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_to_prevDayClose_ratio_class', 'AH_max_1dayago_to_Close_class', 'PM_max_vs_PM_max_1dayago_class', 'PM_min_to_Close_ratio_class', 'open_to_prev_close_class', 'PM_max_to_dayOpen_ratio_class', 'PM_time_diff_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_prevDayClose_class', 'dayOpen_to_prevDayClose_class', 'Close_to_prevDayOpen_class'],
+    ['dayOpen_to_prevDayOpen_ratio_class', 'dayOpen_to_prevDayClose_class', 'PM_time_diff_class', 'PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_vs_PM_max_1dayago_class', 'PM_max_to_dayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'PM_max_to_prevDayOpen_ratio_class', 'Close_to_open_ratio_class', 'dayOpen_to_prev2DayOpen_ratio_class'],
+    ['Close_to_prevDayClose_class', 'open_to_prev_close_class', 'AH_max_1dayago_to_Close_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_min_to_prevDayClose_ratio_class', 'PM_min_to_open_ratio_class', 'dayOpen_to_prevDayClose_class', 'PM_min_to_Close_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_to_prevDayClose_ratio_class', 'dayOpen_to_prevDayOpen_ratio_class'],
+    ['PM_min_to_prevDayOpen_ratio_class', 'Close_to_Close_1_day_ago_class', 'PM_max_to_Close_ratio_class', 'dayOpen_to_prevDayOpen_ratio_class', 'dayOpen_to_prevDayClose_class', 'AH_max_1dayago_vs_prevDayClose_class', 'return_2d_class', 'PM_min_to_Close_ratio_class', 'Close_to_prevDayClose_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'PM_min_to_open_ratio_class', 'day_of_week'],
+    ['PM_min_to_prevDayOpen_ratio_class', 'Close_to_Close_1_day_ago_class', 'AH_max_1dayago_vs_PM_max_class', 'PM_range_to_close_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'day_of_week', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_prevDayOpen_class', 'dayOpen_to_prevDayClose_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_max_to_dayOpen_ratio_class', 'AH_max_1dayago_to_Close_class', 'PM_time_diff_class', 'Close_to_open_ratio_class'],
+    ['day_of_week', 'open_to_prev_close_class', 'Close_to_prevDayOpen_class', 'PM_max_to_dayOpen_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_min_to_Close_ratio_class', 'PM_min_to_open_ratio_class', 'PM_max_to_prevDayOpen_ratio_class', 'AH_max_1dayago_vs_PM_max_class', 'Close_to_open_ratio_class'],
+    ['day_of_week', 'PM_min_to_prevDayClose_ratio_class', 'PM_time_diff_class', 'PM_range_to_close_ratio_class', 'PM_max_to_dayOpen_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_open_ratio_class', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_max_to_PM_min_ratio_class', 'Close_to_open_ratio_class', 'PM_min_to_Close_ratio_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_prevDayOpen_class'],
+    ['PM_range_to_close_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'high_quad_q_rel_class', 'day_of_week', 'Close_to_prevDayOpen_class', 'PM_max_to_dayOpen_ratio_class', 'AH_max_1dayago_to_Close_class', 'high_quad_p_rel_class', 'PM_min_to_prevDayOpen_ratio_class', 'Close_to_open_ratio_class', 'PM_max_to_Close_ratio_class', 'Close_to_prevDayClose_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_min_to_Close_ratio_class', 'time_in_minutes'],
+    ['dayOpen_to_prevDayClose_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'Close_to_open_ratio_class', 'PM_range_to_open_ratio_class', 'PM_range_to_close_ratio_class', 'Close_to_Close_1_day_ago_class', 'high_slope_rel_class', 'day_of_week', 'PM_max_to_PM_min_ratio_class', 'PM_time_diff_class', 'PM_max_to_prevDayClose_ratio_class'],
+    ['PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_max_to_PM_min_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'high_quad_p_rel_class', 'PM_time_diff_class', 'dayOpen_to_prevDayOpen_ratio_class', 'high_slope_rel_class', 'Close_to_open_ratio_class', 'AH_max_1dayago_vs_PM_max_class'],
+    ['Close_to_prevDayHigh_class', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_min_to_prevDayClose_ratio_class', 'high_slope_rel_class', 'AH_max_1dayago_to_Close_class', 'PM_max_vs_PM_max_1dayago_class', 'AH_max_1dayago_vs_PM_max_class', 'PM_max_to_prevDayOpen_ratio_class', 'day_of_week', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_EMA_48_class', 'PM_min_to_open_ratio_class', 'Close_to_Close_1_day_ago_class', 'Close_to_open_ratio_class', 'high_quad_p_rel_class'],
+    ['AH_max_1dayago_vs_PM_max_class', 'PM_range_to_open_ratio_class', 'high_quad_p_rel_class', 'AH_max_1dayago_vs_prevDayClose_class', 'Close_to_Close_1_day_ago_class', 'PM_max_to_dayOpen_ratio_class', 'high_slope_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'Close_to_prevDayHigh_class', 'dayOpen_to_prevDayOpen_ratio_class', 'dayOpen_to_prevDayClose_class'],
+    ['PM_min_to_prevDayClose_ratio_class', 'high_quad_q_rel_class'],
+    ['PM_max_vs_PM_max_1dayago_class', 'AH_max_1dayago_vs_prevDayClose_class', 'return_1d_to_return_2d_ratio_class'],
+    ['hist_close_ratio_class', 'high_slope_rel_class', 'open_to_prev_close_class'],
+    ['PM_max_to_prevDayClose_ratio_class', 'high_quad_q_rel_class', 'PM_min_to_prevDayOpen_ratio_class', 'AH_max_1dayago_vs_PM_max_class', 'high_quad_p_rel_class', 'PM_max_to_dayOpen_ratio_class'],
+    ['prev2DayClose_to_prevDayClose_ratio_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'PM_range_to_open_ratio_class', 'PM_time_diff_class', 'AH_max_1dayago_to_Close_class', 'PM_range_to_close_ratio_class', 'PM_max_to_dayOpen_ratio_class', 'PM_max_to_prevDayClose_ratio_class', 'Close_to_prevDayHigh_class', 'Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'PM_min_to_open_ratio_class'],
+
+    ['PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'high_quad_p_rel_class'],
+
+    ['return_1d_class', 'coef_q_vol_rel_class'],#AAPL
+    ['time_in_minutes', 'dayOpen_to_prevDayOpen_ratio_class'], #OKLO
+    ['date_after_0125', 'coef_q_vol_rel_class', 'return_2d_class'], #OKLO
+
+    ['Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'Close_to_open_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'close_to_High10_class', 'PM_range_to_open_ratio_class'], #SHOP
+    ['date_after_1124', 'open_to_prev_close_class', 'high_quad_q_rel_class', 'PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_PM_max_class'], #SNOW
+    ['close_to_Low10_class', 'prev2DayClose_to_prevDayClose_ratio_class'],
+    ['close_to_Low20_class', 'close_to_High20_class', 'return_1d_to_return_2d_ratio_class', 'PM_time_diff_class', 'slope_a_vol_rel_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_vs_PM_max_1dayago_class', 'date_after_1124', 'PM_range_to_open_ratio_class', 'AH_max_1dayago_vs_PM_max_class'], #LLY
+    ['high_quad_q_rel_class', 'PM_range_to_close_ratio_class', 'Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'date_after_0125', 'ema_ratio2_class', 'coef_p_vol_rel_class', 'open_to_prev_close_class', 'PM_volume_max_class'], #V
+    ['PM_min_to_prevDayClose_ratio_class', 'PM_min_to_open_ratio_class', 'date_after_0125'],#V
+    ['PM_max_to_dayOpen_ratio_class', 'dayOpen_to_prevDayClose_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class', 'FD_3', 'Close_to_EMA_48_class', 'Close_class', 'AH_max_1dayago_vs_PM_max_class'],#AMZN
+    ['PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'return_1d_to_return_2d_ratio_class'],#AMZN
+    ['FD_1','FD_2','FD_3', 'time_in_minutes','STD_10_class','STD_30_class'],
+    ['AH_max_1dayago_vs_PM_max_class', 'return_1d_class'],#TSLA
+    ['dayOpen_to_prevDayOpen_ratio_class', 'PM_time_diff_class', 'date_after_0924', 'high_quad_p_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_max_vs_PM_max_1dayago_class'], #TSLA
+    ['open_to_prev_close_class', 'time_in_minutes'],
+    ['PM_max_to_dayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_Close_ratio_class','PM_time_diff_class','prev2DayClose_to_prevDayClose_ratio_class','day_of_week','PM_min_to_open_ratio_class','PM_max_to_prevDayClose_ratio_class','Close_to_open_ratio_class'],
+    ['prev2DayClose_to_prevDayClose_ratio_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_open_ratio_class','dayOpen_to_prevDayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','PM_min_to_Close_ratio_class'],
+    ]
     count_model_types()
-    exit()
+
     missing_sets = check_missing_feature_sets(feature_subsets)
     
     if missing_sets:

@@ -82,7 +82,7 @@ for i in range(2500):  # Or however many iterations you need
     selected_features = random.sample(list(feature_columns), 3)
     X_selected_train = df_filtered[selected_features]
     # Create a new instance for each iteration
-    model = DecisionTreeClassifier(max_depth=1, min_samples_leaf=5)
+    model = DecisionTreeClassifier(max_depth=1, min_samples_leaf=7)
     model.fit(X_selected_train, y_filtered)
     y_pred = model.predict(X_selected_train)
     precision = precision_score(y_filtered, y_pred, zero_division=0)

@@ -306,47 +306,47 @@ def balance_binary_target(df, target_column):
         df = df.drop(indices_to_remove)
     return df
 
-def additional_ratios(df,available_features_by_stock):
+def additional_ratios(df,available_features_by_stock=None):
     df = df.copy()
-    if 'PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock: 
+    if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
         df['PM_time_diff'] = df['PM_max_time_in_sec'] - df['PM_min_time_in_sec']
-    if 'PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock: 
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock): 
         df['PM_max_to_min_ratio'] = df['PM_max'] / df['PM_min']
-    if 'PM_min' in available_features_by_stock and 'dayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_min' in available_features_by_stock and 'dayOpen' in available_features_by_stock):
         df['PM_min_to_open_ratio'] = df['PM_min'] / df['dayOpen']
-    if 'PM_max' in available_features_by_stock and 'dayOpen' in available_features_by_stock and 'PM_min' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'dayOpen' in available_features_by_stock and 'PM_min' in available_features_by_stock):
         df['PM_range_to_open_ratio'] = (df['PM_max'] - df['PM_min']) / df['dayOpen']
-    if 'PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock and 'Close' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock and 'Close' in available_features_by_stock):
         df['PM_range_to_close_ratio'] = (df['PM_max'] - df['PM_min']) / df['Close']
-    if 'dayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayOpen' in available_features_by_stock):
         df['Close_to_open_ratio'] = df['Close'] / df['dayOpen']
-    if 'dayOpen' in available_features_by_stock and 'prevDayClose' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayOpen' in available_features_by_stock and 'prevDayClose' in available_features_by_stock):
         df['dayOpen_to_prevDayClose'] = df['dayOpen'] / df['prevDayClose']
-    if 'Close_1_day_ago' in available_features_by_stock and 'Close_2_days_ago' in available_features_by_stock:
+    if available_features_by_stock is None or ('Close_1_day_ago' in available_features_by_stock and 'Close_2_days_ago' in available_features_by_stock):
         df['hist_close_ratio'] = df['Close_1_day_ago'] / df['Close_2_days_ago']
-    if 'dayOpen' in available_features_by_stock and 'prevDayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayOpen' in available_features_by_stock and 'prevDayOpen' in available_features_by_stock):
         df['dayOpen_to_prevDayOpen_ratio'] = (df['dayOpen'] / df['prevDayOpen'])
-    if 'dayOpen' in available_features_by_stock and 'prev2DayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayOpen' in available_features_by_stock and 'prev2DayOpen' in available_features_by_stock):
         df['dayOpen_to_prev2DayOpen_ratio'] = (df['dayOpen'] / df['prev2DayOpen'])
-    if 'Open_1_day_ago' in available_features_by_stock and 'Close_1_day_ago' in available_features_by_stock:
+    if available_features_by_stock is None or ('Open_1_day_ago' in available_features_by_stock and 'Close_1_day_ago' in available_features_by_stock):
         df['Open_1_day_ago_to_Close_1_day_ago_ratio'] = (df['Open_1_day_ago'] / df['Close_1_day_ago'])
-    if 'return_1d' in available_features_by_stock and 'return_2d' in available_features_by_stock:
+    if available_features_by_stock is None or ('return_1d' in available_features_by_stock and 'return_2d' in available_features_by_stock):
         df['return_1d_to_return_2d_ratio'] = (df['return_1d'] / df['return_2d'])
     
-    if 'prev2DayClose' in available_features_by_stock and 'prevDayClose' in available_features_by_stock:
+    if available_features_by_stock is None or ('prev2DayClose' in available_features_by_stock and 'prevDayClose' in available_features_by_stock):
         df['prev2DayClose_to_prevDayClose_ratio'] = df['prev2DayClose'] / df['prevDayClose']
-    if 'PM_max' in available_features_by_stock and 'PM_max_1dayago' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'PM_max_1dayago' in available_features_by_stock):
         df['PM_max_vs_PM_max_1dayago'] = df['PM_max'] / df['PM_max_1dayago']
-    if 'AH_max_1dayago' in available_features_by_stock and 'Close' in available_features_by_stock:
+    if available_features_by_stock is None or ('AH_max_1dayago' in available_features_by_stock and 'Close' in available_features_by_stock):
         df['AH_max_1dayago_to_Close'] = df['AH_max_1dayago'] / df['Close']
-    if "AH_max_1dayago" in available_features_by_stock and "PM_max" in available_features_by_stock:
+    if available_features_by_stock is None or ("AH_max_1dayago" in available_features_by_stock and "PM_max" in available_features_by_stock):
         df['AH_max_1dayago_vs_PM_max'] = df['AH_max_1dayago'] / df['PM_max']
-    if 'AH_max_1dayago' in available_features_by_stock and 'prevDayClose' in available_features_by_stock:
+    if available_features_by_stock is None or ('AH_max_1dayago' in available_features_by_stock and 'prevDayClose' in available_features_by_stock):
         df['AH_max_1dayago_vs_prevDayClose'] = df['AH_max_1dayago'] / df['prevDayClose']
 
-    if 'prevDayClose' in available_features_by_stock and 'Close' in available_features_by_stock:
+    if available_features_by_stock is None or ('prevDayClose' in available_features_by_stock and 'Close' in available_features_by_stock):
         df['Close_to_prevDayLow'] = df['Close'] / df['prevDayLow']
-    if 'dayHigh_3' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayHigh_3' in available_features_by_stock):
         df['Close_to_prevDayHigh'] = df['Close'] / df['dayHigh_3']
     return df
 
@@ -373,17 +373,17 @@ def calculate_volume_slopes(df,available_features_by_stock):
             np.nan 
         )
     return df
-def calculate_slopes(df,available_features_by_stock):
+def calculate_slopes(df,available_features_by_stock=None):
     df = df.copy()
-    if 'dayHigh_1' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayHigh_1' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock):
         df['high_slope_rel'] = (df['dayHigh_3'] - df['dayHigh_1']) / 2  #https://chatgpt.com/share/679ce81a-ae24-800e-83f9-61efd07dad61
-    if 'dayHigh_1' in available_features_by_stock and 'dayHigh_2' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayHigh_1' in available_features_by_stock and 'dayHigh_2' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock):
         df['high_quad_p_rel'] = (df['dayHigh_1']+ df['dayHigh_3']-2*df['dayHigh_2']) / 2
         df['high_quad_q_rel'] = (-5*df['dayHigh_1']-3* df['dayHigh_3']+8*df['dayHigh_2']) / 2
 
-    if 'dayHigh_1' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayHigh_1' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock):
         df['high_slope_rel'] = (df['high_slope_rel']/df["Close"])*100
-    if 'dayHigh_1' in available_features_by_stock and 'dayHigh_2' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock:
+    if available_features_by_stock is None or ('dayHigh_1' in available_features_by_stock and 'dayHigh_2' in available_features_by_stock and 'dayHigh_3' in available_features_by_stock):
         df['high_quad_p_rel'] = (df['high_quad_p_rel']/df["Close"])*100
         df['high_quad_q_rel'] = (df['high_quad_q_rel']/df["Close"])*100
 
@@ -447,16 +447,16 @@ def calculate_sma_ratios(df):
     df['ratio_sma2'] = df['SMA_40'] / df['SMA_50']
     df['ratio_sma3'] = df['Close'] / df['SMA_60']
     return df
-def calculate_ema_ratios(df,available_features_by_stock):
+def calculate_ema_ratios(df,available_features_by_stock=None):
     df = df.copy()
-    if 'EMA_13' in available_features_by_stock and 'EMA_48' in available_features_by_stock:
+    if available_features_by_stock is None or ('EMA_13' in available_features_by_stock and 'EMA_48' in available_features_by_stock):
         df['ema_ratio1'] = df['EMA_13'] / df['EMA_48']
-    if 'EMA_3' in available_features_by_stock and 'EMA_13' in available_features_by_stock:
+    if available_features_by_stock is None or ('EMA_3' in available_features_by_stock and 'EMA_13' in available_features_by_stock):
         df['ema_ratio2'] = df['EMA_3'] / df['EMA_13']
-    if 'EMA_48' in available_features_by_stock:
+    if available_features_by_stock is None or ('EMA_48' in available_features_by_stock):
         df['Close_to_EMA_48'] = df['Close'] / df['EMA_48']
     return df
-def calculate_highs_and_lows(df,available_features_by_stock):
+def calculate_highs_and_lows(df):
     df = df.copy()
     if 'Stock' in df.columns:
         # Group by Stock if the column exists
@@ -510,13 +510,13 @@ def add_shifted_fractional_diff_from_DEPRADO(df):
     df.loc[df[fd3_cols].isnull().any(axis=1), 'FD_3'] = None
 
     return df
-def add_momentum(group,stock,valid_columns_dict):
+def add_momentum(group,stock,valid_columns_dict =None):
     # 5-bar liquidity-adjusted momentum
     # Numerator: Close(t) - Close(t-5)
     # Denominator: sum of volumes between t-5 and t (rolling 5 if intraday)
     # df["mom_5"] = (df["Close"] - df["Close"].shift(5)) \
     #                 / df["Volume"].rolling(window=5).sum()
-    if stock in valid_columns_dict and 'Volume' in valid_columns_dict[stock]:
+    if valid_columns_dict is None or (stock in valid_columns_dict and 'Volume' in valid_columns_dict[stock]):
         mom_5 = (group["Close"] - group["Close"].shift(5)) / group["Volume"].rolling(window=5).sum()
     else: 
         mom_5 = None
@@ -529,32 +529,32 @@ def add_volatilities(df):
     df["vol_20"] = df["return"].rolling(window=20).std()
     df["vol_50"] = df["return"].rolling(window=50).std()
     return df
-def additional_Close_ratios(df,available_features_by_stock):
+def additional_Close_ratios(df,available_features_by_stock = None):
     df = df.copy()
-    if 'prevDayClose' in available_features_by_stock:
+    if available_features_by_stock is None or ('prevDayClose' in available_features_by_stock):
         df['Close_to_prevDayClose'] = df['Close'] / df['prevDayClose']
-    if 'Close_1_day_ago' in available_features_by_stock:
+    if available_features_by_stock is None or ('Close_1_day_ago' in available_features_by_stock):
         df['Close_to_Close_1_day_ago'] = df['Close'] / df['Close_1_day_ago']
-    if 'prevDayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('prevDayOpen' in available_features_by_stock):
         df['Close_to_prevDayOpen'] = df['Close'] / df['prevDayOpen']
     return df
-def additional_PM_ratios(df,available_features_by_stock):
+def additional_PM_ratios(df,available_features_by_stock=None):
     df = df.copy()
-    if 'PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock):
         df['PM_max_to_PM_min_ratio'] = df['PM_max'] / df['PM_min']
-    if 'PM_max' in available_features_by_stock and 'dayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'dayOpen' in available_features_by_stock):
         df['PM_max_to_dayOpen_ratio'] = df['PM_max'] / df['dayOpen']
-    if 'PM_max' in available_features_by_stock and 'prevDayClose' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'prevDayClose' in available_features_by_stock):
         df['PM_max_to_prevDayClose_ratio'] = df['PM_max'] / df['prevDayClose']
-    if 'PM_min' in available_features_by_stock and 'prevDayClose' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_min' in available_features_by_stock and 'prevDayClose' in available_features_by_stock):
         df['PM_min_to_prevDayClose_ratio'] = df['PM_min'] / df['prevDayClose']
-    if 'PM_max' in available_features_by_stock and 'prevDayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'prevDayOpen' in available_features_by_stock):
         df['PM_max_to_prevDayOpen_ratio'] = df['PM_max'] / df['prevDayOpen']
-    if 'PM_min' in available_features_by_stock and 'prevDayOpen' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_min' in available_features_by_stock and 'prevDayOpen' in available_features_by_stock):
         df['PM_min_to_prevDayOpen_ratio'] = df['PM_min'] / df['prevDayOpen']
-    if 'PM_max' in available_features_by_stock and 'Close' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'Close' in available_features_by_stock):
         df['PM_max_to_Close_ratio'] = df['PM_max'] / df['Close']
-    if 'PM_min' in available_features_by_stock and 'Close' in available_features_by_stock:
+    if available_features_by_stock is None or ('PM_min' in available_features_by_stock and 'Close' in available_features_by_stock):
         df['PM_min_to_Close_ratio'] = df['PM_min'] / df['Close']
 
     return df

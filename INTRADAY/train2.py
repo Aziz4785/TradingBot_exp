@@ -23,8 +23,11 @@ from utils import *
 
 TARGET = 'to_buy_1d'
 SAVE_MODEL= 1
-TESTING_LENGTH_IN_DAYS = 30
+TESTING_LENGTH_IN_DAYS = 10
 TRAINING_STARTING_LAG = 300
+USE_THIS_SCRIPT_FOR_METADATA_GENERATION = 1 #if false it means we use it to generate files for live trading
+#if true it means we will generate files that will help us find the best meta parameters for the model
+
 cleanup_files(['models_to_use.json','model_output.csv','debugging_from_backtest.csv'])
 cleanup_folders(['allmodels','allscalers'])
 folder = f'allmodels'
@@ -35,34 +38,52 @@ os.makedirs(scaler_folder, exist_ok=True)
 df = pd.read_csv('clean.csv')
 df = df.sample(frac=1).reset_index(drop=True)
 df.drop_duplicates(inplace=True)
-df = df.dropna()
+print("number of None in the column TARGET : ",df[TARGET].isna().sum())
+#DELETE THESE ROWS
+df = df.dropna(subset=[TARGET])
+#df = df.dropna()
 #df = df[df['Stock'].isin(['BIO', 'TEAM','LW'])]
 
 df["Date"] = pd.to_datetime(df["Date"])
 today = pd.to_datetime("today").normalize()
 
 #all_data = all_data.dropna()
+if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
+    cutoff = today - pd.Timedelta(days=8)
+    original_df = df.copy()
+    #delete all rows after cutoff
+    df = df[df['Date']<=cutoff]
+else:
+    cutoff = today 
 
-
-train_start = today - pd.Timedelta(days=TRAINING_STARTING_LAG)
-train_end   = today - pd.Timedelta(days=TESTING_LENGTH_IN_DAYS) 
-
+train_start = cutoff - pd.Timedelta(days=TRAINING_STARTING_LAG)
+train_end   = cutoff - pd.Timedelta(days=TESTING_LENGTH_IN_DAYS) 
+#print("train_start : ",train_start)
+#print("train_end : ",train_end)
 # Define the two test splits:
 if TESTING_LENGTH_IN_DAYS>=40:
     test_split1_start = train_end  
-    test_split1_end   = today - pd.Timedelta(days=int(TESTING_LENGTH_IN_DAYS/2))  
+    test_split1_end   = cutoff - pd.Timedelta(days=int(TESTING_LENGTH_IN_DAYS/2))  
 
     test_split2_start = test_split1_end
-    test_split2_end   = today       
+    test_split2_end   = cutoff       
 
-    test_split_global_start = today - pd.Timedelta(days=100) 
-    test_split_global_end = today
+    test_split_global_start = cutoff - pd.Timedelta(days=100) 
+    test_split_global_end = cutoff
+
+    print("test_split1_start : ",test_split1_start)
+    print("test_split1_end : ",test_split1_end)
+    print("test_split2_start : ",test_split2_start)
+    print("test_split2_end : ",test_split2_end)
+    print("test_split_global_start : ",test_split_global_start)
+    print("test_split_global_end : ",test_split_global_end)
+
 models = {
     'DT1': DecisionTreeClassifier(), 
     #'DT2': DecisionTreeClassifier(max_depth=10, min_samples_split=4), this never give good results
     'DT3': DecisionTreeClassifier(max_depth=15, min_samples_leaf=5, min_samples_split=10),
     'DT4': DecisionTreeClassifier(max_depth=20, criterion='entropy', random_state=42),
-    'DT5': DecisionTreeClassifier(min_samples_leaf=3, max_features='sqrt', max_depth=6),
+    #'DT5': DecisionTreeClassifier(min_samples_leaf=3, max_features='sqrt', max_depth=6),
     'DT6': DecisionTreeClassifier(max_depth=8),
     #'DT7': DecisionTreeClassifier(max_depth=None,min_samples_split=5,min_samples_leaf=2,criterion='gini'), not good results
     'DT8':DecisionTreeClassifier(class_weight={0: 3.0, 1: 1.0}, max_depth=15, min_samples_leaf=5, min_samples_split=10),
@@ -107,30 +128,20 @@ feature_subsets = [
     ['PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_max_to_PM_min_ratio_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'high_quad_p_rel_class', 'PM_time_diff_class', 'dayOpen_to_prevDayOpen_ratio_class', 'high_slope_rel_class', 'Close_to_open_ratio_class', 'AH_max_1dayago_vs_PM_max_class'],
     ['Close_to_prevDayHigh_class', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_min_to_prevDayClose_ratio_class', 'high_slope_rel_class', 'AH_max_1dayago_to_Close_class', 'PM_max_vs_PM_max_1dayago_class', 'AH_max_1dayago_vs_PM_max_class', 'PM_max_to_prevDayOpen_ratio_class', 'day_of_week', 'dayOpen_to_prev2DayOpen_ratio_class', 'Close_to_EMA_48_class', 'PM_min_to_open_ratio_class', 'Close_to_Close_1_day_ago_class', 'Close_to_open_ratio_class', 'high_quad_p_rel_class'],
     ['AH_max_1dayago_vs_PM_max_class', 'PM_range_to_open_ratio_class', 'high_quad_p_rel_class', 'AH_max_1dayago_vs_prevDayClose_class', 'Close_to_Close_1_day_ago_class', 'PM_max_to_dayOpen_ratio_class', 'high_slope_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'Close_to_prevDayHigh_class', 'dayOpen_to_prevDayOpen_ratio_class', 'dayOpen_to_prevDayClose_class'],
-    ['PM_min_to_prevDayClose_ratio_class', 'high_quad_q_rel_class'],
-    ['PM_max_vs_PM_max_1dayago_class', 'AH_max_1dayago_vs_prevDayClose_class', 'return_1d_to_return_2d_ratio_class'],
-    ['hist_close_ratio_class', 'high_slope_rel_class', 'open_to_prev_close_class'],
     ['PM_max_to_prevDayClose_ratio_class', 'high_quad_q_rel_class', 'PM_min_to_prevDayOpen_ratio_class', 'AH_max_1dayago_vs_PM_max_class', 'high_quad_p_rel_class', 'PM_max_to_dayOpen_ratio_class'],
     ['prev2DayClose_to_prevDayClose_ratio_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'PM_range_to_open_ratio_class', 'PM_time_diff_class', 'AH_max_1dayago_to_Close_class', 'PM_range_to_close_ratio_class', 'PM_max_to_dayOpen_ratio_class', 'PM_max_to_prevDayClose_ratio_class', 'Close_to_prevDayHigh_class', 'Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'PM_min_to_open_ratio_class'],
 
-    ['PM_max_to_prevDayOpen_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_min_to_Close_ratio_class', 'high_quad_p_rel_class'],
-
     ['return_1d_class', 'coef_q_vol_rel_class'],#AAPL
     ['time_in_minutes', 'dayOpen_to_prevDayOpen_ratio_class'], #OKLO
-    ['date_after_0125', 'coef_q_vol_rel_class', 'return_2d_class'], #OKLO
 
     ['Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'Close_to_open_ratio_class', 'PM_min_to_prevDayOpen_ratio_class', 'close_to_High10_class', 'PM_range_to_open_ratio_class'], #SHOP
-    ['date_after_1124', 'open_to_prev_close_class', 'high_quad_q_rel_class', 'PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_PM_max_class'], #SNOW
-    ['close_to_Low10_class', 'prev2DayClose_to_prevDayClose_ratio_class'],
     ['close_to_Low20_class', 'close_to_High20_class', 'return_1d_to_return_2d_ratio_class', 'PM_time_diff_class', 'slope_a_vol_rel_class', 'AH_max_1dayago_vs_prevDayClose_class', 'PM_max_vs_PM_max_1dayago_class', 'date_after_1124', 'PM_range_to_open_ratio_class', 'AH_max_1dayago_vs_PM_max_class'], #LLY
     ['high_quad_q_rel_class', 'PM_range_to_close_ratio_class', 'Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'date_after_0125', 'ema_ratio2_class', 'coef_p_vol_rel_class', 'open_to_prev_close_class', 'PM_volume_max_class'], #V
     ['PM_min_to_prevDayClose_ratio_class', 'PM_min_to_open_ratio_class', 'date_after_0125'],#V
     ['PM_max_to_dayOpen_ratio_class', 'dayOpen_to_prevDayClose_class', 'PM_min_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class', 'FD_3', 'Close_to_EMA_48_class', 'Close_class', 'AH_max_1dayago_vs_PM_max_class'],#AMZN
     ['PM_min_to_open_ratio_class', 'AH_max_1dayago_vs_prevDayClose_class', 'return_1d_to_return_2d_ratio_class'],#AMZN
     ['FD_1','FD_2','FD_3', 'time_in_minutes','STD_10_class','STD_30_class'],
-    ['AH_max_1dayago_vs_PM_max_class', 'return_1d_class'],#TSLA
     ['dayOpen_to_prevDayOpen_ratio_class', 'PM_time_diff_class', 'date_after_0924', 'high_quad_p_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_max_vs_PM_max_1dayago_class'], #TSLA
-    ['open_to_prev_close_class', 'time_in_minutes'],
     ['PM_max_to_dayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_Close_ratio_class','PM_time_diff_class','prev2DayClose_to_prevDayClose_ratio_class','day_of_week','PM_min_to_open_ratio_class','PM_max_to_prevDayClose_ratio_class','Close_to_open_ratio_class'],
     ['prev2DayClose_to_prevDayClose_ratio_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_open_ratio_class','dayOpen_to_prevDayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','PM_min_to_Close_ratio_class'],
     ]
@@ -138,8 +149,10 @@ feature_subsets = [
 unique_stocks_list = df['Stock'].unique().tolist()
 print(f"there are {len(unique_stocks_list)} unique stocks")
 best_for_stock = {}
-
+stock_added_counter = set()
 for stock in unique_stocks_list: 
+    if len(stock_added_counter)>6:
+        break
     print("stock : ",stock)
     available_features = []
     df_stock = df[df['Stock'] == stock].copy()
@@ -150,16 +163,22 @@ for stock in unique_stocks_list:
     good_columns = missing_fraction[missing_fraction < 0.05].index.tolist()
     available_features = set(good_columns)
     print(f"number of Columns with less than 5% missing values for {stock}: {len(good_columns)}")
+    #drop None on these columns:
+    df_stock = df_stock.dropna(subset=good_columns)
 
     init_percentage_of_1s = df_stock[TARGET].mean() * 100
     df_stock['Time'] = df_stock['Date'].dt.strftime('%H:%M')
     mask_train = (df_stock["Date"] >= train_start) & (df_stock["Date"] < train_end)
-    mask_test  = (df_stock["Date"] >= train_end)   & (df_stock["Date"] <= today)
+    print(f"train on [{train_start}, {train_end}[")
+    mask_test  = (df_stock["Date"] >= train_end) & (df_stock["Date"] <= cutoff)
+    print(f"test on [{train_end}, {cutoff}]")
     if TESTING_LENGTH_IN_DAYS>=40:
         mask_test1 = (df_stock["Date"] >= test_split1_start) & (df_stock["Date"] < test_split1_end)
         mask_test2 = (df_stock["Date"] >= test_split2_start) & (df_stock["Date"] <= test_split2_end)
         mask_test_global = (df_stock["Date"] >= test_split_global_start) & (df_stock["Date"] <= test_split_global_end)
-
+        print(f"test1 on [{test_split1_start}, {test_split1_end}[")
+        print(f"test2 on [{test_split2_start}, {test_split2_end}]")
+        print(f"test_global on [{test_split_global_start}, {test_split_global_end}]")
     df_stock_train = df_stock[mask_train] #TODO : try to balance this train df 
     df_stock_test  = df_stock[mask_test]
     training_length = len(df_stock_train)
@@ -197,9 +216,7 @@ for stock in unique_stocks_list:
 
         scaler_already_saved = False
         for model_name, model in models.items():
-            #print("    model : ",model_name)
-            # Train the model
-            model.fit(X_train_scaled, y_train)
+            model.fit(X_train_scaled, y_train) #for RF this will throw an error if X_train_scaled contains NaNs
             
             # Make predictions
             y_pred = model.predict(X_test_scaled)
@@ -296,19 +313,28 @@ for stock in unique_stocks_list:
             #LATER IN THE CODE WE WILL SAVE THE MODEL..
 
             # Calculate accuracy
-            accuracy = accuracy_score(y_test, y_pred)
+            if TESTING_LENGTH_IN_DAYS<=5:
+                accuracy = accuracy_score(y_train, y_train_pred)
+            else:
+                accuracy = accuracy_score(y_test, y_pred)
             #results[model_name] = accuracy
             y_pred = model.predict(X_test_scaled)
             y_pred = model.predict(X_test_scaled)
             
-            cm = confusion_matrix(y_test, y_pred)
+            if TESTING_LENGTH_IN_DAYS<=5:
+                cm = confusion_matrix(y_train, y_train_pred)
+            else:
+                cm = confusion_matrix(y_test, y_pred)
             if cm.size >= 4:     
-                precision,recall,specificity,f05,mcc = calculate_all_metrics(y_test,y_pred)
-                
+                if TESTING_LENGTH_IN_DAYS<=5:
+                    #consider training metrics:
+                    precision,recall,specificity,f05,mcc = calculate_all_metrics(y_train,y_train_pred)
+                else:
+                    precision,recall,specificity,f05,mcc = calculate_all_metrics(y_test,y_pred)
                 #print(f"{model_name} - Overall Accuracy: {accuracy:.2%} | Specificity: {specificity:.2%} | Precision: {precision:.2%}, Recall: {recall:.2%} | MCC: {mcc:.2f}")
-                if precision>0.78 and specificity>0.87 and recall>0.01: #and mcc>0.01
+                if precision>0.78 and specificity>0.87 and recall>0.01 and precision<=0.93: #and mcc>0.01
                     model_name_to_save = f'{model_name}_{stock}_{i}'
-                    
+                    stock_added_counter.add(stock)
                     if stock not in best_for_stock:
                         with open(f'{folder}/{model_name_to_save}.pkl', 'wb') as model_file:
                             pickle.dump(model, model_file)
@@ -329,25 +355,81 @@ for stock in unique_stocks_list:
                                     pickle.dump(scaler, scaler_file)
                                 scaler_already_saved=True
 
+    if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
+        if stock in best_for_stock:
+            print(f"this stock has a model we will compute the precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)}")
+            #test the model on original_df after cutoff
+            model_name, _, _,_,features_id,_,_,_,_,_,_,_,_,features_for_prediction = best_for_stock[stock]
+            with open(f'{folder}/{model_name}.pkl', 'rb') as model_file:
+                model = pickle.load(model_file)
+            with open(f'{scaler_folder}/scaler_{features_id}_{stock}.pkl', 'rb') as scaler_file:
+                scaler = pickle.load(scaler_file)
+
+            #rows of original_df after cutoff for that stock
+            df_stock = original_df[original_df['Stock'] == stock].copy()
+            #extract dates between cutoff and cutoff+6days
+            df_stock = df_stock[df_stock['Date'] > cutoff]
+            df_stock = df_stock[df_stock['Date'] <= cutoff+pd.Timedelta(days=6)]
+            print(f"backtest on ]{cutoff}, {cutoff+pd.Timedelta(days=6)}]")
+            y_true = df_stock[TARGET]
+            X = df_stock[features_for_prediction]
+            X_scaled = scaler.transform(X)
+            y_pred = model.predict(X_scaled)
+            precision,recall,specificity,f05,mcc = calculate_all_metrics(y_true,y_pred)
+            if precision is not None and precision>=0.65:
+                # i want to add the preoperty "good_model" = 1 to best_for_stock[stock]
+                best_for_stock[stock] = best_for_stock[stock] + (1,) #TO KEEP THE DATA AS A TUPLE
+            elif precision is None:
+                best_for_stock[stock] = best_for_stock[stock] + (0,)
+            else:
+                best_for_stock[stock] = best_for_stock[stock] + (-1,)
+            #print(f"precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)} : {precision:.2%} | Specificity: {specificity:.2%} | Recall: {recall:.2%} | MCC: {mcc:.2f}")
+            
+
+
 output_data = {}
-for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset) in best_for_stock.items():
-    output_data[stock] = {
-        "best_model": best_model,
-        "precision": best_prec,     # raw float value (e.g., 0.95)
-        "specificity": best_spec,   # raw float value (e.g., 0.90)
-        "recall": best_recall,
-        "subset_id": features_id,
-        "testing_length_in_days": TESTING_LENGTH_IN_DAYS,
-        "std_precision_by_time": std_precision_by_time,
-        "init_percentage_of_1s": init_percentage_of_1s,
-        "min_precision_by_month": min_precision_by_month,
-        "min_precision_by_time": min_precision_by_time,
-        "std_precision_by_month": std_precision_by_month,
-        "training_length": training_length,
-        "training_precision": prec_training,
-        "testing_length": testing_length,
-        "subset": subset          # a list that is already JSON serializable
-    }
+
+if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
+    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset,good) in best_for_stock.items():
+        output_data[stock] = {
+            "best_model": best_model,
+            "precision": best_prec,     # raw float value (e.g., 0.95)
+            "specificity": best_spec,   # raw float value (e.g., 0.90)
+            "recall": best_recall,
+            "subset_id": features_id,
+            "testing_length_in_days": TESTING_LENGTH_IN_DAYS,
+            "std_precision_by_time": std_precision_by_time,
+            "init_percentage_of_1s": init_percentage_of_1s,
+            "min_precision_by_month": min_precision_by_month,
+            "min_precision_by_time": min_precision_by_time,
+            "std_precision_by_month": std_precision_by_month,
+            "training_length": training_length,
+            "training_precision": prec_training,
+            "testing_length": testing_length,
+            "file_created_after_20_03": 1,
+            "subset": subset ,         # a list that is already JSON serializable
+            "good_model": good
+        }
+else:
+    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset) in best_for_stock.items():
+        output_data[stock] = {
+            "best_model": best_model,
+            "precision": best_prec,     # raw float value (e.g., 0.95)
+            "specificity": best_spec,   # raw float value (e.g., 0.90)
+            "recall": best_recall,
+            "subset_id": features_id,
+            "testing_length_in_days": TESTING_LENGTH_IN_DAYS,
+            "std_precision_by_time": std_precision_by_time,
+            "init_percentage_of_1s": init_percentage_of_1s,
+            "min_precision_by_month": min_precision_by_month,
+            "min_precision_by_time": min_precision_by_time,
+            "std_precision_by_month": std_precision_by_month,
+            "training_length": training_length,
+            "training_precision": prec_training,
+            "testing_length": testing_length,
+            "file_created_after_20_03": 1,
+            "subset": subset          # a list that is already JSON serializable
+        }
 with open("models_to_use.json", "w") as f:
     json.dump(output_data, f, indent=4)
 print("Data saved to models_to_use.json")

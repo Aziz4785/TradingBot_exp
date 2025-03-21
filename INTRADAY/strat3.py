@@ -212,8 +212,8 @@ all_data = all_data[all_data["market_time"] == "RTH"]
 for ticker in tickers:
     #print("percentage of None for the column dayOpen")
     #print(all_data.loc[ticker]["dayOpen"].isnull().mean())
-    #1) find the columns that have less than 10% None for that ticker
-    available_features_by_stock[ticker] = list(all_data.loc[ticker].columns[all_data.loc[ticker].isnull().mean() < 0.1])
+    #1) find the columns that have less than 8% None for that ticker
+    available_features_by_stock[ticker] = list(all_data.loc[ticker].columns[all_data.loc[ticker].isnull().mean() < 0.08])
 #all_data = all_data.dropna()
 
 

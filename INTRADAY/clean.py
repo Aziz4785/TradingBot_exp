@@ -277,7 +277,7 @@ def process_stock_group(group):
     group = calculate_slopes(group,available_features_by_stock[stock])
     group = calculate_volume_slopes(group,available_features_by_stock[stock])
     group = calculate_ema_ratios(group,available_features_by_stock[stock])
-    group = calculate_highs_and_lows(group,available_features_by_stock[stock])
+    group = calculate_highs_and_lows(group)
     return group
 
 df = df.sort_values(['Stock','Date'])
@@ -293,6 +293,7 @@ print("len of df after removing extreme rows: ",len(df))
 #print("cleaning the data..")
 # print("len of df before dropping na: ",len(df))
 # df = df.dropna()
+df = df.dropna(subset=['to_buy_1d']) #because these rows are the last date for each stock and we don't know if we reached the target or not
 # print("len of df after dropping na: ",len(df))
 pd.options.display.max_columns = 60
 

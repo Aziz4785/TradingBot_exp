@@ -19,7 +19,7 @@ folders = [f for f in os.listdir(root_dir)
           if os.path.isdir(os.path.join(root_dir, f))
           and f.startswith("old_stuff")
           and f != "old_stuff_analysis"
-          and 1 <= int(f.replace("old_stuff", "")) <= 9]
+          and 1 <= int(f.replace("old_stuff", "")) <= 20]
 
 print(f"Found {len(folders)} folders to process.")
 csv_data = []
@@ -46,6 +46,26 @@ for folder in folders:
                 row["min_precision_by_time"] = model_info.get("min_precision_by_time", None)
                 row["best_probability_threshold"] = model_info.get("best_probability_threshold", None)
                 row["init_percentage_of_1s"] = model_info.get("init_percentage_of_1s", None)
+                row["testing_length_in_days"]= model_info.get("testing_length_in_days", None)
+                row["std_precision_by_time"]= model_info.get("std_precision_by_time", None)
+                row["min_precision_by_month"]= model_info.get("min_precision_by_month", None)
+                row["std_precision_by_month"]= model_info.get("std_precision_by_month", None)
+                row["training_precision"]= model_info.get("training_precision", None)
+                row["file_created_after_20_03"]= model_info.get("file_created_after_20_03", 0)
+                
+                training_length = model_info.get("training_length", None)
+                testing_length = model_info.get("testing_length", None)
+                ratio = None 
+                if training_length is not None and testing_length is not None:
+                    denominator = training_length + testing_length
+                    if denominator > 0:
+                        ratio = testing_length / denominator
+                    else:
+                        ratio = None  
+
+                row["training_length"]= training_length
+                row["testing_length"]= testing_length
+                row["testing_len_ratio"] = ratio
                 if row["Model"].startswith("RF"):
                     row["Model_type"]="RF"
                 elif row["Model"].startswith("XGB"):
@@ -71,13 +91,28 @@ for folder in folders:
 # Convert to DataFrame
 df = pd.DataFrame(csv_data)
 
+nan_forbidden_in_these_cols = ["Ticker", "Model","Model_type", "Precision", "Specificity", "Recall", "good_model"]
 none_percentages = df.isna().mean() * 100
-print("Percentage of None values in each column BEFORE DROPPING NA:")
+df.dropna(subset=nan_forbidden_in_these_cols, inplace=True)
 for column, percentage in none_percentages.items():
     if column not in features_set:
         print(f"{column}: {percentage:.2f}%")
+        # If a column has more than 10% missing values, prompt the user
+        if percentage > 10 and column not in nan_forbidden_in_these_cols:
+            print(f"\nColumn '{column}' has {percentage:.2f}% missing values.")
+            action = input("Enter 'c' to drop the column, 'r' to drop rows with NaN in this column, or any other key to skip: ")
+            
+            if action.lower() == 'c':
+                df = df.drop(columns=[column])
+                print(f"Column '{column}' has been dropped from the DataFrame.")
+            elif action.lower() == 'r':
+                df = df.dropna(subset=[column])
+                print(f"Rows with missing values in column '{column}' have been dropped from the DataFrame.")
+            else:
+                print(f"No action taken for column '{column}'.")
+
 #delete row that have None in one of these columns : Ticker,Best Model,Precision,Specificity,Recall,good_model
-df.dropna(subset=["Ticker", "Model","Model_type", "Precision", "Specificity", "Recall", "good_model"], inplace=True)
+#df.dropna(subset=nan_forbidden_in_these_cols, inplace=True)
 
 # This will only fill NA values with 0 for columns in features_set
 df[list(features_set)] = df[list(features_set)].fillna(0)
