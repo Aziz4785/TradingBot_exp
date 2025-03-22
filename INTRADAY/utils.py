@@ -308,8 +308,8 @@ def balance_binary_target(df, target_column):
 
 def additional_ratios(df,available_features_by_stock=None):
     df = df.copy()
-    if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
-        df['PM_time_diff'] = df['PM_max_time_in_sec'] - df['PM_min_time_in_sec']
+    #if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
+        #df['PM_time_diff'] = df['PM_max_time_in_sec'] - df['PM_min_time_in_sec']
     if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock): 
         df['PM_max_to_min_ratio'] = df['PM_max'] / df['PM_min']
     if available_features_by_stock is None or ('PM_min' in available_features_by_stock and 'dayOpen' in available_features_by_stock):

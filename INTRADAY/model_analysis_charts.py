@@ -8,10 +8,10 @@ import textwrap
 from sklearn.metrics import roc_curve, roc_auc_score
 #just run this file and see the charts one by one
 
-models_dir  = "old_stuff10/allmodels"
-scalers_dir = "old_stuff10/allscalers"
-config_path = "old_stuff10/models_to_use.json"
-clean_path = 'old_stuff10/clean.csv'
+models_dir  = "old_stuff12/allmodels"
+scalers_dir = "old_stuff12/allscalers"
+config_path = "old_stuff12/models_to_use.json"
+clean_path = 'old_stuff12/clean.csv'
 with open(config_path, 'r') as file:
     config = json.load(file)
 stocks_from_json= get_stock_symbols_from_json(config)
@@ -207,7 +207,7 @@ for stock in stocks:
             max_precision = prec
             best_threshold = t
     #get the threshold from where the curve start decreasing
-    print(f" for the stock {stock} the best threshold is {best_threshold:.2f} with precision {max_precision}")
+    print(f" for the stock {stock} \"best_probability_threshold\": {best_threshold:.2f}, with precision {max_precision}")
     plt.plot(thresholds, precisions, marker='.', linestyle='-', label=f'{stock}')
 #"best_probability_threshold": 0.94,
 # Add labels and title

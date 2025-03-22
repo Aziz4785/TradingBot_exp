@@ -29,6 +29,8 @@ df = df.sample(frac=1).reset_index(drop=True)
 df.drop_duplicates(inplace=True)
 df = df.dropna()
 df = df[df['Stock']=='PG']
+features_to_exclude = ['PM_time_diff_class']
+df = df.drop(columns=features_to_exclude)
 random.seed(9)
 
 def try_multiple_feature_selection(X_train_scaled, X_test_scaled, y_train, y_test, 

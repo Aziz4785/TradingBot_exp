@@ -88,7 +88,7 @@ tickers = ["OKLO","META","AAPL","MSFT","JPM","V","AMZN","NKE","LRCX","PFE","VICI
     time.sleep(5)"""
 for ticker in tickers:
     print(ticker)
-    histData(tickers.index(ticker), usTechStk(ticker), duration='230 D', candle_size= CANDLE_SIZE) 
+    histData(tickers.index(ticker), usTechStk(ticker), duration='250 D', candle_size= CANDLE_SIZE) 
     time.sleep(70) # Adding sleep to avoid pacing violation. Adjust as needed based on IBKR limits.
 
 ###################storing trade app object in dataframe#######################

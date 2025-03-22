@@ -188,6 +188,8 @@ df = pd.read_csv('C:/Users/aziz8/Documents/tradingBot/clean.csv')
 df = df.sample(frac=1).reset_index(drop=True)
 df.drop_duplicates(inplace=True)
 df = df.dropna()
+features_to_exclude = ['PM_time_diff_class']
+df = df.drop(columns=features_to_exclude)
 df = df[df['Stock'].isin(['ORCL','HIMS','SHOP'])]
 df = balance_binary_target(df, TARGET_COLUMN)
 percentages = df[['to_buy_1d']].mean() * 100

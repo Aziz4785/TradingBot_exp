@@ -19,7 +19,7 @@ folders = [f for f in os.listdir(root_dir)
           if os.path.isdir(os.path.join(root_dir, f))
           and f.startswith("old_stuff")
           and f != "old_stuff_analysis"
-          and 1 <= int(f.replace("old_stuff", "")) <= 20]
+          and 1 <= int(f.replace("old_stuff", "")) <= 40]
 
 print(f"Found {len(folders)} folders to process.")
 csv_data = []

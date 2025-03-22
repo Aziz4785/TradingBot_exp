@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier,BaggingClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
@@ -38,6 +38,10 @@ os.makedirs(scaler_folder, exist_ok=True)
 df = pd.read_csv('clean.csv')
 df = df.sample(frac=1).reset_index(drop=True)
 df.drop_duplicates(inplace=True)
+
+features_to_exclude = ['PM_time_diff_class'] #because i suspect models with this feature tend to overfit
+df = df.drop(columns=features_to_exclude)
+
 print("number of None in the column TARGET : ",df[TARGET].isna().sum())
 #DELETE THESE ROWS
 df = df.dropna(subset=[TARGET])
@@ -49,7 +53,12 @@ today = pd.to_datetime("today").normalize()
 
 #all_data = all_data.dropna()
 if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
-    cutoff = today - pd.Timedelta(days=8)
+    cutoff = today - pd.Timedelta(days=random.randint(8, 35))
+    TESTING_LENGTH_IN_DAYS = random.randint(2, 80)
+    TRAINING_STARTING_LAG = random.randint(270, 350)
+    print("cutoff = ",cutoff)
+    print("TESTING_LENGTH_IN_DAYS = ",TESTING_LENGTH_IN_DAYS)
+    print("TRAINING_STARTING_LAG = ",TRAINING_STARTING_LAG)
     original_df = df.copy()
     #delete all rows after cutoff
     df = df[df['Date']<=cutoff]
@@ -98,6 +107,9 @@ models = {
     'RF6': RandomForestClassifier(n_estimators=300,max_depth=10, max_features='sqrt',min_samples_leaf=2,min_samples_split=5),
     'RF7': RandomForestClassifier(n_estimators=150, max_depth=8, min_samples_leaf = 20,max_features='sqrt'),
     'RF8': RandomForestClassifier(class_weight={0: 3.0, 1: 1.0}, n_estimators=150, max_features=None, max_depth=3),
+    'RF9': RandomForestClassifier(n_estimators=200,max_features=0.3,min_weight_fraction_leaf=0.05, max_depth=8),
+
+    'BG1': BaggingClassifier(estimator=DecisionTreeClassifier(criterion='entropy',class_weight='balanced', max_depth=10),n_estimators=100,max_samples=0.7,bootstrap=True),
 
     'XGB1': XGBClassifier(n_estimators=100),
     #'XGB3':XGBClassifier(n_estimators=300,colsample_bytree= 0.9,gamma=0.1,learning_rate=0.1,max_depth=7,min_child_weight=1,subsample=0.7),
@@ -105,9 +117,7 @@ models = {
     'XGB9':XGBClassifier(n_estimators=300,colsample_bytree= 0.8,gamma=0,learning_rate=0.1,max_depth=7,min_child_weight=1,subsample=0.7),
     
     #'XGB16':XGBClassifier(n_estimators=300,colsample_bytree=  0.9, gamma= 0, learning_rate=0.3,max_depth=8,min_child_weight=1,subsample=0.8),
-    'XGB17':XGBClassifier(n_estimators=500,learning_rate=0.05,max_depth=3,min_child_weight=3,subsample=0.8,colsample_bytree=0.7,gamma=1.0,reg_alpha=0.1,reg_lambda=1.0),
-    'XGB18': XGBClassifier(n_estimators=400,learning_rate=0.05,max_depth=6,min_child_weight=2,subsample=0.85,colsample_bytree=0.85,gamma=0.2),
-    'XGB19':XGBClassifier(n_estimators=300, colsample_bytree=0.8, gamma=0, learning_rate=0.1, max_depth=7, min_child_weight=1, subsample=0.7, scale_pos_weight=3.0),
+    #'XGB19':XGBClassifier(n_estimators=300, colsample_bytree=0.8, gamma=0, learning_rate=0.1, max_depth=7, min_child_weight=1, subsample=0.7, scale_pos_weight=3.0),
 }
 
 #with open('data.json', 'r') as file:
@@ -247,7 +257,7 @@ for stock in unique_stocks_list:
 
                 if any(metric is None for metric in [prec_h1, spec_half1, prec_h2, spec_half2, prec_global, spec_global]):
                     continue
-                if (min(spec_half1, spec_half2) < 0.75 or
+                if (min(spec_half1, spec_half2) < 0.7 or
                     abs(spec_half1 - spec_half2) > 0.25 or
                     min(prec_h2, prec_global) < 0.7 or
                     abs(prec_h1 - prec_global) > 0.25 or 
@@ -428,6 +438,7 @@ else:
             "training_precision": prec_training,
             "testing_length": testing_length,
             "file_created_after_20_03": 1,
+            "cutoff_date": cutoff,
             "subset": subset          # a list that is already JSON serializable
         }
 with open("models_to_use.json", "w") as f:

@@ -9,7 +9,7 @@ folders = [f for f in os.listdir(root_dir)
           if os.path.isdir(os.path.join(root_dir, f))
           and f.startswith("old_stuff")
           and f != "old_stuff_analysis"
-          and 6 <= int(f.replace("old_stuff", "")) <= 17]
+          and 6 <= int(f.replace("old_stuff", "")) <= 20]
 
 print("folders", folders)
 #old_stuff1 -> old_stuff5  (15 dernier jours de fevrier)
@@ -117,15 +117,10 @@ def count_model_types():
     
     # Counter for model types
     model_counter = Counter()
-    
+    model_counter_good_models_only = Counter()
+    subModel_counter_good_models_only  = Counter()
     # Full model name counter (to see specific versions)
     full_model_counter = Counter()
-    
-    # Find all folders that start with old_stuff but are not old_stuff_analysis
-    """folders = [f for f in os.listdir(root_dir) 
-               if os.path.isdir(os.path.join(root_dir, f)) 
-               and f.startswith("old_stuff") 
-               and f != "old_stuff_analysis"]"""
     
     print(f"Found {len(folders)} folders to process.")
     
@@ -143,20 +138,34 @@ def count_model_types():
                 # Extract model names from each ticker's model
                 for ticker, model_info in models_data.items():
                     if "best_model" in model_info:
+                        goodmodel=False
+                        if "good_model" in model_info and model_info["good_model"]==1:
+                            goodmodel = True
                         model_name = model_info["best_model"]
                         
                         # Store the full model name
                         full_model_counter[model_name] += 1
                         
+                        if goodmodel:
+                            submodel = model_name.split('_')[0]
+                            subModel_counter_good_models_only[submodel] += 1
                         # Extract model type (RF, XGB, DT)
                         if model_name.startswith("RF"):
                             model_counter["RF"] += 1
+                            if goodmodel:
+                                model_counter_good_models_only["RF"] += 1
                         elif model_name.startswith("XGB"):
                             model_counter["XGB"] += 1
+                            if goodmodel:
+                                model_counter_good_models_only["XGB"] += 1
                         elif model_name.startswith("DT"):
                             model_counter["DT"] += 1
+                            if goodmodel:
+                                model_counter_good_models_only["DT"] += 1
                         else:
                             model_counter["Other"] += 1
+                            if goodmodel:
+                                model_counter_good_models_only["Other"] += 1
                 
                 print(f"Processed {models_file}")
             except Exception as e:
@@ -169,6 +178,14 @@ def count_model_types():
     for model_type, count in model_counter.most_common():
         print(f"{model_type}: {count} ({count/sum(model_counter.values())*100:.2f}%)")
     
+    print("\n--- Model Types Ranked by Frequency (only for good_model ==1---")
+    for model_type, count in model_counter_good_models_only.most_common():
+        print(f"{model_type}: {count} ({count/sum(model_counter_good_models_only.values())*100:.2f}%)")
+
+    print("\n--- Model Sub Types Ranked by Frequency (only for good_model ==1---")
+    for model_type, count in subModel_counter_good_models_only.most_common():
+        print(f"{model_type}: {count} ({count/sum(subModel_counter_good_models_only.values())*100:.2f}%)")
+
     print("\n--- Top 10 Specific Models ---")
     for model_name, count in full_model_counter.most_common(10):
         print(f"{model_name}: {count}")
