@@ -154,6 +154,7 @@ feature_subsets = [
     ['dayOpen_to_prevDayOpen_ratio_class', 'PM_time_diff_class', 'date_after_0924', 'high_quad_p_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_max_vs_PM_max_1dayago_class'], #TSLA
     ['PM_max_to_dayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_Close_ratio_class','PM_time_diff_class','prev2DayClose_to_prevDayClose_ratio_class','day_of_week','PM_min_to_open_ratio_class','PM_max_to_prevDayClose_ratio_class','Close_to_open_ratio_class'],
     ['prev2DayClose_to_prevDayClose_ratio_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_open_ratio_class','dayOpen_to_prevDayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','PM_min_to_Close_ratio_class'],
+    ['PM_max_to_min_ratio', 'FD_1', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class', 'Close_to_prevDayHigh_class', 'PM_min_to_Close_ratio_class'],
     ]
 
 unique_stocks_list = df['Stock'].unique().tolist()
@@ -342,7 +343,7 @@ for stock in unique_stocks_list:
                 else:
                     precision,recall,specificity,f05,mcc = calculate_all_metrics(y_test,y_pred)
                 #print(f"{model_name} - Overall Accuracy: {accuracy:.2%} | Specificity: {specificity:.2%} | Precision: {precision:.2%}, Recall: {recall:.2%} | MCC: {mcc:.2f}")
-                if precision>0.78 and specificity>0.87 and recall>0.01 and precision<=0.93: #and mcc>0.01
+                if precision>0.75 and specificity>0.87 and recall>0 and precision<=0.92 and recall <=0.2: #and mcc>0.01
                     model_name_to_save = f'{model_name}_{stock}_{i}'
                     stock_added_counter.add(stock)
                     if stock not in best_for_stock:
@@ -386,13 +387,13 @@ for stock in unique_stocks_list:
             X_scaled = scaler.transform(X)
             y_pred = model.predict(X_scaled)
             precision,recall,specificity,f05,mcc = calculate_all_metrics(y_true,y_pred)
-            if precision is not None and precision>=0.65:
+            if precision is not None and precision>=0.75:
                 # i want to add the preoperty "good_model" = 1 to best_for_stock[stock]
-                best_for_stock[stock] = best_for_stock[stock] + (1,) #TO KEEP THE DATA AS A TUPLE
+                best_for_stock[stock] = best_for_stock[stock] + (1,precision,) #TO KEEP THE DATA AS A TUPLE
             elif precision is None:
-                best_for_stock[stock] = best_for_stock[stock] + (0,)
+                best_for_stock[stock] = best_for_stock[stock] + (0,-1,)
             else:
-                best_for_stock[stock] = best_for_stock[stock] + (-1,)
+                best_for_stock[stock] = best_for_stock[stock] + (-1,precision,)
             #print(f"precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)} : {precision:.2%} | Specificity: {specificity:.2%} | Recall: {recall:.2%} | MCC: {mcc:.2f}")
             
 
@@ -400,7 +401,7 @@ for stock in unique_stocks_list:
 output_data = {}
 
 if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
-    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset,good) in best_for_stock.items():
+    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset,good,live_precision) in best_for_stock.items():
         output_data[stock] = {
             "best_model": best_model,
             "precision": best_prec,     # raw float value (e.g., 0.95)
@@ -417,8 +418,10 @@ if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
             "training_precision": prec_training,
             "testing_length": testing_length,
             "file_created_after_20_03": 1,
-            "subset": subset ,         # a list that is already JSON serializable
-            "good_model": good
+            "good_model": good,
+            "precision_after_cutoff":live_precision,
+            "cutoff_date": cutoff.strftime("%Y-%m-%d"),
+            "subset": subset         # a list that is already JSON serializable
         }
 else:
     for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset) in best_for_stock.items():
@@ -438,7 +441,6 @@ else:
             "training_precision": prec_training,
             "testing_length": testing_length,
             "file_created_after_20_03": 1,
-            "cutoff_date": cutoff,
             "subset": subset          # a list that is already JSON serializable
         }
 with open("models_to_use.json", "w") as f:

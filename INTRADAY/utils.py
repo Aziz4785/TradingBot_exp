@@ -308,8 +308,8 @@ def balance_binary_target(df, target_column):
 
 def additional_ratios(df,available_features_by_stock=None):
     df = df.copy()
-    #if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
-        #df['PM_time_diff'] = df['PM_max_time_in_sec'] - df['PM_min_time_in_sec']
+    if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
+        df['PM_time_diff'] = df['PM_max_time_in_sec'] - df['PM_min_time_in_sec']
     if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock): 
         df['PM_max_to_min_ratio'] = df['PM_max'] / df['PM_min']
     if available_features_by_stock is None or ('PM_min' in available_features_by_stock and 'dayOpen' in available_features_by_stock):
@@ -350,26 +350,27 @@ def additional_ratios(df,available_features_by_stock=None):
         df['Close_to_prevDayHigh'] = df['Close'] / df['dayHigh_3']
     return df
 
-def calculate_volume_slopes(df,available_features_by_stock):
+def calculate_volume_slopes(df,available_features_by_stock=None):
     df = df.copy()
-    if 'Volume1' in available_features_by_stock and 'Volume2' in available_features_by_stock and 'Volume3' in available_features_by_stock:
+    if available_features_by_stock is None or ('Volume1' in available_features_by_stock and 'Volume2' in available_features_by_stock and 'Volume3' in available_features_by_stock):
         df['slope_a_vol_rel'] = (-6*df['Volume1'] - 2*df['Volume2'] + 2*df['Volume3'] + 6*df['Volume']) / 20
         df['coef_p_vol_rel'] = (df['Volume1'] - df['Volume2'] -df['Volume3'] + df['Volume']) / 4
         df['coef_q_vol_rel'] = (-21*df['Volume1'] +13* df['Volume2'] +17*df['Volume3'] -9* df['Volume']) / 20
 
         df['slope_a_vol_rel'] = np.where(
             df['Volume1'] != 0, 
-            (df['slope_a_vol_rel'] / df['Volume1']) * 100, 
+            (df['slope_a_vol_rel'].astype(float) / df['Volume1'].astype(float)) * 100, 
             np.nan 
         )
         df['coef_p_vol_rel'] = np.where(
-            df['Volume1'] != 0, 
-            (df['coef_p_vol_rel'] / df['Volume1']) * 100, 
-            np.nan 
+            df['Volume1'] != 0,
+            (df['coef_p_vol_rel'].astype(float) / df['Volume1'].astype(float)) * 100,
+            np.nan
         )
+        
         df['coef_q_vol_rel'] = np.where(
             df['Volume1'] != 0, 
-            (df['coef_q_vol_rel'] / df['Volume1']) * 100, 
+            (df['coef_q_vol_rel'].astype(float) / df['Volume1'].astype(float)) * 100, 
             np.nan 
         )
     return df

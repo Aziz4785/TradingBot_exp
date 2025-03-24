@@ -37,25 +37,33 @@ from SuperModel import *
 import matplotlib.pyplot as plt
 pd.options.display.max_rows = None
 
-config_path = "models_to_use.json"
-models_dir  = "allmodels"
-scalers_dir = "allscalers"
-clean_path = "clean.csv"
-bins_file = "bins_json.json"
-start_date = "2025-02-10"
-end_date   = "2025-03-21"
+config_path = "old_stuff25/models_to_use.json"
+models_dir  = "old_stuff25/allmodels"
+scalers_dir = "old_stuff25/allscalers"
+clean_path = "old_stuff25/clean.csv"
+bins_file = "old_stuff25/bins_json.json"
+start_date = "2025-02-02"
+end_date   = "2025-03-24"
 # with open('available_features_by_stock.json') as f:
 #     available_features_by_stock = json.load(f)
 
 from datetime import datetime, timedelta
 cutoff_date0125 = datetime(2025, 1, 1)
 cutoff_date0924 = datetime(2024, 9, 1)
+cutoff_date1124 = datetime(2024, 11, 24)
 clean_df = pd.read_csv(clean_path)
 clean_df = clean_df.sample(frac=1).reset_index(drop=True)
 clean_df.drop_duplicates(inplace=True)
-clean_df = clean_df.dropna()
+#clean_df = clean_df.dropna()
+
+missing_fraction = clean_df.isna().mean()
+good_columns = missing_fraction[missing_fraction < 0.05].index.tolist()
+df = clean_df.dropna(subset=good_columns)
+
+
 clean_df["Date"] = pd.to_datetime(clean_df["Date"])
-beginning_of_unseen_data = clean_df['Date'].max()
+#beginning_of_unseen_data = clean_df['Date'].max()
+beginning_of_unseen_data =  pd.to_datetime("2025-03-09 15:30")
 
 with open(config_path, 'r') as file:
     config = json.load(file)
@@ -184,6 +192,7 @@ for ticker in tickers:
     df_rth = df.loc[mask].copy()
     df_rth = calculate_daily_ohlc(df_rth)
     df_rth=calculate_historical_highs(df_rth)
+    df_rth = calculate_historical_Volumes(df_rth)
     df_rth = add_historical_values(df_rth)
     df = initialize_columns(df)
 
@@ -191,7 +200,7 @@ for ticker in tickers:
         "dayOpen", "dayClose", "dayHigh", 
         "dayHigh_1", "dayHigh_2", "dayHigh_3","dayLow","prevDayLow",
         "prevDayOpen", "prevDayClose", "prev2DayOpen", "prev2DayClose",
-        "Close_1_day_ago", "Close_2_days_ago", "Open_1_day_ago"
+        "Close_1_day_ago", "Close_2_days_ago", "Open_1_day_ago","Volume1","Volume2","Volume3"
     ]
     df.loc[mask, cols_to_copy] = df_rth[cols_to_copy]
     
@@ -210,6 +219,7 @@ for ticker in tickers:
     #print("df columns before calling additional_PM_ratios: ",df.columns)
     df = additional_PM_ratios(df)
     df = calculate_slopes(df)
+    df = calculate_volume_slopes(df)
     #TODO ADD a boolean to see if there is a local minima on the  dayHigh_3
 
     df = calculate_ema_ratios(df)
@@ -256,7 +266,8 @@ for ticker in tickers:
         input_data = {}
         row_features['date_after_0125'] = int(pd.to_datetime(idx) > cutoff_date0125)
         row_features['date_after_0924'] = int(pd.to_datetime(idx) > cutoff_date0924)
-
+        row_features['date_after_1124'] = int(pd.to_datetime(idx) > cutoff_date1124)
+    
         input_data = {col: row_features[col] for col in six_bins_columns}
         input_data["day_of_week"] = row_features["day_of_week"]
         
@@ -347,7 +358,7 @@ for ticker in tickers:
                 ret = (exit_price / entry) - 1
 
         tickers_ret[ticker].append(ret)
-    if ticker in ['AAPL','TSN','KO']:
+    if ticker in ['UNH']:
         df[['Open','High','Low','Close','prediction','actual_result','target_hit_on']].to_csv(f"debugging_{ticker}_from_backtest.csv", index=True)
 #That will show you which trades are missing an exit or (less commonly) have more than 2 entries.
 for t_id, trade_list in trade_data[ticker].items():
@@ -370,14 +381,17 @@ for ticker in tickers:
     false_positives = ((filtered_df["prediction"] == 1) & (filtered_df["actual_result"] == 0)).sum()
     precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else None
     
-    if precision is not None and precision >= 0.65:
+    if precision is not None and precision >= 0.75:
         good_ticker = 1
     elif precision is None:
         good_ticker = 0
     else:
         good_ticker = -1
-    print(f"PRECISION FOR {ticker}  = {precision}    -> {good_ticker}")
-    if ticker in ['AAPL','TSN']:
+    print(f"{ticker}  = {precision}    -> {good_ticker}")
+    print(f"   \"good_model\": {good_ticker},")
+    print(f"   \"precision_after_cutoff\": {precision},")
+
+    if ticker in ['JPM','TRV','MA','TEAM','MCD','LMT','CRWD']:
         print("because ]start date = ",start_date)
         print(f"and enddate = {end_date}]")
         print(f"and number of true positives = {true_positives}")
@@ -507,11 +521,12 @@ else:
 
     # 5. Manually set x-ticks and their labels
     #    For example, let's put a label every 5 observations (you can adjust as you like)
-    step = 12 
+    step = 7 
     x_ticks = range(0, len(df_numeric_index), step)
     ax.set_xticks(x_ticks)
     # Format the corresponding date labels, e.g. 'YYYY-MM-DD' (or any other format)
-    x_labels = [original_dates[i].strftime('%Y-%m-%d') for i in x_ticks]
+    #x_labels = [original_dates[i].strftime('%Y-%m-%d') for i in x_ticks]
+    x_labels = [original_dates[i].strftime('%Y-%m-%d %H:%M') for i in x_ticks]
     ax.set_xticklabels(x_labels, rotation=75)  # rotate if needed
 
 
@@ -522,7 +537,17 @@ else:
 
     # If you still want a vertical line for the 'unseen data' point:
     # 1. Convert your original date index to numeric by locating the position:
-    beginning_of_unseen_data_numeric = returns_df.index.get_loc(beginning_of_unseen_data)
+    #beginning_of_unseen_data_numeric = returns_df.index.get_loc(beginning_of_unseen_data)
+    # If beginning_of_unseen_data is not in the index, get the nearest date:
+    if beginning_of_unseen_data not in returns_df.index:
+        closest_idx = returns_df.index.get_indexer([beginning_of_unseen_data], method='nearest')[0]
+        closest_date = returns_df.index[closest_idx]
+    else:
+        closest_date = beginning_of_unseen_data
+
+    # Now, retrieve its numeric location for plotting the vertical line:
+    beginning_of_unseen_data_numeric = returns_df.index.get_loc(closest_date)
+
     plt.axvline(x=beginning_of_unseen_data_numeric, color='red', linestyle='--')
 
     # Adjust legend position and layout

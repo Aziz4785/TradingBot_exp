@@ -19,7 +19,7 @@ import json
 from sklearn.preprocessing import LabelEncoder
 from utils import * 
 
-model = XGBClassifier(n_estimators=300, colsample_bytree=0.8, gamma=0, learning_rate=0.1, max_depth=7, min_child_weight=1, subsample=0.7, scale_pos_weight=3.0)
+model = RandomForestClassifier(n_estimators=200,max_features=0.3,min_weight_fraction_leaf=0.05, max_depth=8)
 TARGET_COLUMN = 'to_buy_1d'
 USE_STOCK_COLUMN = False
 BALANCE_DATA = False
@@ -27,8 +27,14 @@ BALANCE_DATA = False
 df = pd.read_csv('clean.csv')
 df = df.sample(frac=1).reset_index(drop=True)
 df.drop_duplicates(inplace=True)
+df = df.dropna(subset=[TARGET_COLUMN])
 df = df.dropna()
-df = df[df['Stock']=='PG']
+#df = df[df['Stock']=='PG']
+df = df[df['Stock'].isin(['KO','PG','RKLB'])].copy()
+missing_fraction = df.isna().mean()
+good_columns = missing_fraction[missing_fraction < 0.05].index.tolist()
+df = df.dropna(subset=good_columns)
+
 features_to_exclude = ['PM_time_diff_class']
 df = df.drop(columns=features_to_exclude)
 random.seed(9)
@@ -36,7 +42,7 @@ random.seed(9)
 def try_multiple_feature_selection(X_train_scaled, X_test_scaled, y_train, y_test, 
                                  model, k, feature_names,X_train_scaled_df,X_test_scaled_df): #k is the number of features to be selected
     results = {}
-    
+    """
     # 1. Statistical Methods - ANOVA F-value
     selector_f = SelectKBest(score_func=f_classif, k=k)
     X_train_f = selector_f.fit_transform(X_train_scaled, y_train)
@@ -77,7 +83,7 @@ def try_multiple_feature_selection(X_train_scaled, X_test_scaled, y_train, y_tes
         'accuracy': accuracy_score(y_test, y_pred_l1),
         'features': selected_features_l1
     }
-    
+    """
     # 4. Tree-based Feature Selection
     selector_tree = SelectFromModel(estimator=ExtraTreesClassifier(),
                                   max_features=k)
@@ -93,13 +99,13 @@ def try_multiple_feature_selection(X_train_scaled, X_test_scaled, y_train, y_tes
     }
     
     #5. random method
-    best_accuracy = 0
+    best_fbeta  = 0
     best_features = None
     best_precision = 0
     best_features_precision = None
-    for i in range(150): #PUT 120
-        if i%30==0:
-            print(f"{i} -> {best_accuracy}")
+    for i in range(300): #PUT 120
+        if i%90==0:
+            print(f"{i} -> {best_fbeta }")
         selected_features = random.sample(list(feature_names), k)
         X_selected_train = X_train_scaled_df[selected_features]
         X_selected_test = X_test_scaled_df[selected_features]
@@ -109,14 +115,14 @@ def try_multiple_feature_selection(X_train_scaled, X_test_scaled, y_train, y_tes
         #accuracy = accuracy_score(y_test, y_pred)
         fbeta = fbeta_score(y_test, y_pred, average='macro', beta=0.25)
         precision = precision_score(y_test, y_pred, zero_division=0)
-        if fbeta > best_accuracy:
-            best_accuracy = fbeta
+        if fbeta > best_fbeta :
+            best_fbeta  = fbeta
             best_features = selected_features
         if precision >best_precision :
             best_precision = precision
             best_features_precision = selected_features
     results['random_method'] = {
-        'fbeta': best_accuracy,
+        'fbeta': best_fbeta ,
         'features': best_features,
         'precision': best_precision,
         'features_precision' : best_features_precision
@@ -135,7 +141,7 @@ if USE_STOCK_COLUMN:
 
 drop_columns = ['Stock', 'Date', 'Close', TARGET_COLUMN, 
                 'to_buy_1d', 'to_buy_2d', 'to_buy_1d31', 
-                'to_buy_intraday', "PM_max", "PM_min"]
+                'to_buy_intraday', "PM_max", "PM_min","prev_close"]
 X = df.drop(columns=drop_columns, errors='ignore')
 # y = df[TARGET_COLUMN]
 # X_train, X_test, y_train, y_test = train_test_split(
@@ -193,15 +199,13 @@ for k in range(2, 14, 1):
 
 
 """
-fbeta: 0.5716
+RANDOM_METHOD Selection:
+fbeta: 0.5879
 Selected Features:
-['return_1d_to_return_2d_ratio_class', 'mom_5_class', 'Open_1_day_ago_to_Close_1_day_ago_ratio_class', 'vol_50_class', 'PM_max_vs_PM_max_1dayago_class', 'date_after_0924', 'Close_class', 'PM_range_to_close_ratio_class']
+['return_1d_to_return_2d_ratio_class', 'vol_5_class', 'PM_max_to_PM_min_ratio_class', 'PM_min_to_open_ratio_class']
 
-fbeta: 0.6656
+RANDOM_METHOD Selection:
+fbeta: 0.6183
 Selected Features:
-['open_to_prev_close_class', 'time_in_minutes']
-
-fbeta: 0.6619
-Selected Features:
-['date_after_0125', 'dayOpen_to_prevDayClose_class', 'PM_max_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class']
+['PM_max_to_min_ratio', 'FD_1', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class', 'Close_to_prevDayHigh_class', 'PM_min_to_Close_ratio_class']
 """

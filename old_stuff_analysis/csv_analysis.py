@@ -25,7 +25,7 @@ print("colomns of X : ",X.columns)
 y = df[target_column]
 
 # Train Decision Tree Classifier
-clf = DecisionTreeClassifier(max_depth=2)  # Limit depth for better interpretability
+clf = DecisionTreeClassifier(max_depth=3)  # Limit depth for better interpretability
 clf.fit(X, y)
 
 # Plot the decision tree
@@ -40,7 +40,7 @@ df_bad = df.copy()
 df_bad["good_model"] = df_bad["good_model"].replace(0, -1)
 X_bad = df_bad[feature_columns]
 y_bad = df_bad[target_column]
-clf_bad = DecisionTreeClassifier(max_depth=2, min_samples_leaf=5)
+clf_bad = DecisionTreeClassifier(max_depth=3, min_samples_leaf=5)
 clf_bad.fit(X_bad, y_bad)
 plt.figure(figsize=(20, 10))
 tree.plot_tree(clf_bad, feature_names=feature_columns, class_names=["-1", "1"], filled=True, rounded=True)
@@ -78,21 +78,22 @@ from sklearn.tree import plot_tree
 best_precision = 0
 best_features_precision = None
 best_model = None 
-for i in range(6500):  
-    if i % 600 == 0:
-        print(f"{i} -> {best_precision}")
-    selected_features = random.sample(list(feature_columns), 4)
-    X_selected_train = df_filtered[selected_features]
-    # Create a new instance for each iteration
-    model = DecisionTreeClassifier(max_depth=2, min_samples_leaf=7)
-    model.fit(X_selected_train, y_filtered)
-    y_pred = model.predict(X_selected_train)
-    precision = precision_score(y_filtered, y_pred, zero_division=0)
-    
-    if precision > best_precision:
-        best_precision = precision
-        best_features_precision = selected_features
-        best_model = model  # Save the model that achieved this precision
+for sample_size in range(1,8):
+    for i in range(6500):  
+        if i % 1000 == 0:
+            print(f"{i} -> {best_precision}")
+        selected_features = random.sample(list(feature_columns), sample_size)
+        X_selected_train = df_filtered[selected_features]
+        # Create a new instance for each iteration
+        model = DecisionTreeClassifier(max_depth=3, min_samples_leaf=7)
+        model.fit(X_selected_train, y_filtered)
+        y_pred = model.predict(X_selected_train)
+        precision = precision_score(y_filtered, y_pred, zero_division=0)
+        
+        if precision > best_precision:
+            best_precision = precision
+            best_features_precision = selected_features
+            best_model = model  # Save the model that achieved this precision
 
 print("Best precision: ", best_precision)
 print("Best features: ", best_features_precision)
