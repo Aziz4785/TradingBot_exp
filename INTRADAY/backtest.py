@@ -37,13 +37,13 @@ from SuperModel import *
 import matplotlib.pyplot as plt
 pd.options.display.max_rows = None
 
-config_path = "old_stuff25/models_to_use.json"
-models_dir  = "old_stuff25/allmodels"
-scalers_dir = "old_stuff25/allscalers"
-clean_path = "old_stuff25/clean.csv"
-bins_file = "old_stuff25/bins_json.json"
+config_path = "old_stuff28/models_to_use.json"
+models_dir  = "old_stuff28/allmodels"
+scalers_dir = "old_stuff28/allscalers"
+clean_path = "old_stuff28/clean.csv"
+bins_file = "old_stuff28/bins_json.json"
 start_date = "2025-02-02"
-end_date   = "2025-03-24"
+end_date   = "2025-03-25"
 # with open('available_features_by_stock.json') as f:
 #     available_features_by_stock = json.load(f)
 
@@ -63,7 +63,8 @@ df = clean_df.dropna(subset=good_columns)
 
 clean_df["Date"] = pd.to_datetime(clean_df["Date"])
 #beginning_of_unseen_data = clean_df['Date'].max()
-beginning_of_unseen_data =  pd.to_datetime("2025-03-09 15:30")
+beginning_of_unseen_data =  pd.to_datetime("2025-02-26 17:00") #cutoff
+
 
 with open(config_path, 'r') as file:
     config = json.load(file)
@@ -162,6 +163,8 @@ def dataDataframe(symbols, TradeApp_obj):
     "Returns historical data for each symbol in a dictionary of DataFrames."
     df_data = {}
     for symbol in symbols:
+        #print("symbol : ",symbol)
+        #print("symbols.index(symbol) : ",symbols.index(symbol))
         df = pd.DataFrame(TradeApp_obj.data[symbols.index(symbol)])
         #df.set_index("Date", inplace=True)
         df_data[symbol] = df
@@ -210,6 +213,7 @@ for ticker in tickers:
     df = add_AH_columns(df)
     df = calculate_emas(df)
     df = calculate_stds(df)
+    df = df[df["market_time"] == "RTH"]
     df = add_shifted_fractional_diff_from_DEPRADO(df)
     df = add_volatilities(df)
     df["mom_5"] = add_momentum(df, ticker)
@@ -257,7 +261,6 @@ for ticker in tickers:
     df['target_hit_on'] = None
     # Loop through each row/bar in the DataFrame
     for idx, row in df.iterrows():
-        
         row_features = row.copy()
         row_features = assign_bin_categories(row_features, loaded_bin_dict_json)
         #if ticker =='TSN':
@@ -287,6 +290,8 @@ for ticker in tickers:
         if prediction != 1:
             tickers_ret[ticker].append(0)
             continue
+        #print("date : ",idx)
+        #print(input_data)
         # Enter trade at current bar’s close.
         entry = row["Close"]
         trade_count[ticker] += 1
@@ -358,7 +363,7 @@ for ticker in tickers:
                 ret = (exit_price / entry) - 1
 
         tickers_ret[ticker].append(ret)
-    if ticker in ['UNH']:
+    if len(tickers)<7:
         df[['Open','High','Low','Close','prediction','actual_result','target_hit_on']].to_csv(f"debugging_{ticker}_from_backtest.csv", index=True)
 #That will show you which trades are missing an exit or (less commonly) have more than 2 entries.
 for t_id, trade_list in trade_data[ticker].items():
@@ -379,6 +384,8 @@ for ticker in tickers:
     # Compute precision
     true_positives = ((filtered_df["prediction"] == 1) & (filtered_df["actual_result"] == 1)).sum()
     false_positives = ((filtered_df["prediction"] == 1) & (filtered_df["actual_result"] == 0)).sum()
+    false_negatives = ((filtered_df["prediction"] == 0) & (filtered_df["actual_result"] == 1)).sum()
+    true_negatives = ((filtered_df["prediction"] == 0) & (filtered_df["actual_result"] == 0)).sum()
     precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else None
     
     if precision is not None and precision >= 0.75:
@@ -391,11 +398,14 @@ for ticker in tickers:
     print(f"   \"good_model\": {good_ticker},")
     print(f"   \"precision_after_cutoff\": {precision},")
 
-    if ticker in ['JPM','TRV','MA','TEAM','MCD','LMT','CRWD']:
+    if ticker in ['IDXX','JPM','TRV','MA','TEAM','MCD','LMT','CRWD','PFE','NUE',
+                  'QQQ','XOM','JNJ','WU','VZ','NFLX']:
         print("because ]start date = ",start_date)
         print(f"and enddate = {end_date}]")
-        print(f"and number of true positives = {true_positives}")
+        print(f"True Positives (TP): {true_positives}")
         print(f"and number of false positives (0 predicted as 1)= {false_positives}")
+        print(f"True Negatives (TN): {true_negatives}")
+        print(f"False Negatives (FN): {false_negatives}")
 
 
 

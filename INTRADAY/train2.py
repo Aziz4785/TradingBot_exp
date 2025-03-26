@@ -25,6 +25,7 @@ TARGET = 'to_buy_1d'
 SAVE_MODEL= 1
 TESTING_LENGTH_IN_DAYS = 10
 TRAINING_STARTING_LAG = 300
+LOOKAHEAD_NUMBER = 24
 USE_THIS_SCRIPT_FOR_METADATA_GENERATION = 1 #if false it means we use it to generate files for live trading
 #if true it means we will generate files that will help us find the best meta parameters for the model
 
@@ -40,7 +41,7 @@ df = df.sample(frac=1).reset_index(drop=True)
 df.drop_duplicates(inplace=True)
 
 features_to_exclude = ['PM_time_diff_class'] #because i suspect models with this feature tend to overfit
-df = df.drop(columns=features_to_exclude)
+df = df.drop(columns=features_to_exclude,errors  ='ignore')
 
 print("number of None in the column TARGET : ",df[TARGET].isna().sum())
 #DELETE THESE ROWS
@@ -48,12 +49,16 @@ df = df.dropna(subset=[TARGET])
 #df = df.dropna()
 #df = df[df['Stock'].isin(['BIO', 'TEAM','LW'])]
 
+
+
 df["Date"] = pd.to_datetime(df["Date"])
-today = pd.to_datetime("today").normalize()
+today = pd.to_datetime("today")
 
 #all_data = all_data.dropna()
 if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
-    cutoff = today - pd.Timedelta(days=random.randint(8, 35))
+    cutoff = today.normalize() - pd.Timedelta(days=random.randint(8, 35))
+    cutoff = cutoff + pd.Timedelta(hours=17)  # Set cutoff time at 17H
+
     TESTING_LENGTH_IN_DAYS = random.randint(2, 80)
     TRAINING_STARTING_LAG = random.randint(270, 350)
     print("cutoff = ",cutoff)
@@ -62,13 +67,25 @@ if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
     original_df = df.copy()
     #delete all rows after cutoff
     df = df[df['Date']<=cutoff]
+
+    weights = [40 - i for i in range(40)]
+    LOOKAHEAD_NUMBER = random.choices(range(40), weights=weights, k=1)[0]
+    # because each row's label depends on data in the next 24 hours (approx).
+    lookahead = pd.Timedelta(hours=LOOKAHEAD_NUMBER)
+    print("lookahead = ",lookahead)
 else:
     cutoff = today 
+    # because each row's label depends on data in the next 24 hours (approx).
+    lookahead = pd.Timedelta(hours=LOOKAHEAD_NUMBER)
 
-train_start = cutoff - pd.Timedelta(days=TRAINING_STARTING_LAG)
-train_end   = cutoff - pd.Timedelta(days=TESTING_LENGTH_IN_DAYS) 
-#print("train_start : ",train_start)
-#print("train_end : ",train_end)
+train_start = cutoff.normalize() - pd.Timedelta(days=TRAINING_STARTING_LAG)
+train_end   = cutoff - pd.Timedelta(days=TESTING_LENGTH_IN_DAYS) #we don't normalize because lets say cutoff ends at 17H (end of market session), so test should also end at 17H (end of market session)
+# Adjust train_end if it falls on a weekend
+if train_end.weekday() == 5:  # Saturday
+    train_end -= pd.Timedelta(days=1)
+elif train_end.weekday() == 6:  # Sunday
+    train_end -= pd.Timedelta(days=2)
+
 # Define the two test splits:
 if TESTING_LENGTH_IN_DAYS>=40:
     test_split1_start = train_end  
@@ -80,12 +97,12 @@ if TESTING_LENGTH_IN_DAYS>=40:
     test_split_global_start = cutoff - pd.Timedelta(days=100) 
     test_split_global_end = cutoff
 
-    print("test_split1_start : ",test_split1_start)
-    print("test_split1_end : ",test_split1_end)
-    print("test_split2_start : ",test_split2_start)
-    print("test_split2_end : ",test_split2_end)
-    print("test_split_global_start : ",test_split_global_start)
-    print("test_split_global_end : ",test_split_global_end)
+    # print("test_split1_start : ",test_split1_start)
+    # print("test_split1_end : ",test_split1_end)
+    # print("test_split2_start : ",test_split2_start)
+    # print("test_split2_end : ",test_split2_end)
+    # print("test_split_global_start : ",test_split_global_start)
+    # print("test_split_global_end : ",test_split_global_end)
 
 models = {
     'DT1': DecisionTreeClassifier(), 
@@ -162,7 +179,7 @@ print(f"there are {len(unique_stocks_list)} unique stocks")
 best_for_stock = {}
 stock_added_counter = set()
 for stock in unique_stocks_list: 
-    if len(stock_added_counter)>6:
+    if len(stock_added_counter)>5:
         break
     print("stock : ",stock)
     available_features = []
@@ -179,8 +196,11 @@ for stock in unique_stocks_list:
 
     init_percentage_of_1s = df_stock[TARGET].mean() * 100
     df_stock['Time'] = df_stock['Date'].dt.strftime('%H:%M')
-    mask_train = (df_stock["Date"] >= train_start) & (df_stock["Date"] < train_end)
-    print(f"train on [{train_start}, {train_end}[")
+    print("initial train end : ",train_end)
+    adjusted_train_end = train_end - lookahead
+    print("adjusted_train_end : ",adjusted_train_end)
+    mask_train = (df_stock["Date"] >= train_start) & (df_stock["Date"] < adjusted_train_end)
+    print(f"train on [{train_start}, {adjusted_train_end}[")
     mask_test  = (df_stock["Date"] >= train_end) & (df_stock["Date"] <= cutoff)
     print(f"test on [{train_end}, {cutoff}]")
     if TESTING_LENGTH_IN_DAYS>=40:
@@ -190,7 +210,7 @@ for stock in unique_stocks_list:
         print(f"test1 on [{test_split1_start}, {test_split1_end}[")
         print(f"test2 on [{test_split2_start}, {test_split2_end}]")
         print(f"test_global on [{test_split_global_start}, {test_split_global_end}]")
-    df_stock_train = df_stock[mask_train] #TODO : try to balance this train df 
+    df_stock_train = df_stock[mask_train]
     df_stock_test  = df_stock[mask_test]
     training_length = len(df_stock_train)
     testing_length = len(df_stock_test)
@@ -329,8 +349,7 @@ for stock in unique_stocks_list:
             else:
                 accuracy = accuracy_score(y_test, y_pred)
             #results[model_name] = accuracy
-            y_pred = model.predict(X_test_scaled)
-            y_pred = model.predict(X_test_scaled)
+            #y_pred = model.predict(X_test_scaled)
             
             if TESTING_LENGTH_IN_DAYS<=5:
                 cm = confusion_matrix(y_train, y_train_pred)
@@ -375,17 +394,37 @@ for stock in unique_stocks_list:
                 model = pickle.load(model_file)
             with open(f'{scaler_folder}/scaler_{features_id}_{stock}.pkl', 'rb') as scaler_file:
                 scaler = pickle.load(scaler_file)
-
+            print(f"we will use the model {model_name} and scaler : scaler_{features_id}_{stock}.pkl to predict")
             #rows of original_df after cutoff for that stock
             df_stock = original_df[original_df['Stock'] == stock].copy()
             #extract dates between cutoff and cutoff+6days
             df_stock = df_stock[df_stock['Date'] > cutoff]
             df_stock = df_stock[df_stock['Date'] <= cutoff+pd.Timedelta(days=6)]
+            
             print(f"backtest on ]{cutoff}, {cutoff+pd.Timedelta(days=6)}]")
             y_true = df_stock[TARGET]
             X = df_stock[features_for_prediction]
+            X.to_csv(f"debug_{stock}_X_pre_scaled.csv", index=True)
             X_scaled = scaler.transform(X)
             y_pred = model.predict(X_scaled)
+
+            temp_df_stock = df_stock.copy()
+            temp_df_stock['Predicted_Target'] = y_pred
+            temp_df_stock[['Stock', 'Date', 'Close', TARGET, 'Predicted_Target']].to_csv(f"debug_{stock}_from_train2.csv", index=True)
+
+            cm = confusion_matrix(y_true, y_pred)
+            if cm.size>=4:
+                TN, FP, FN, TP = cm.ravel()
+                precision = TP / (TP + FP) if (TP + FP) != 0 else 0
+                print("Confusion Matrix:")
+                print(cm)
+                print("\nDetailed Metrics:")
+                print(f"True Positives (TP): {TP}")
+                print(f"False Positives (FP): {FP}")
+                print(f"True Negatives (TN): {TN}")
+                print(f"False Negatives (FN): {FN}")
+                print(f"\nPrecision = TP / (TP + FP) = {TP} / ({TP} + {FP}) = {precision:.4f}")
+
             precision,recall,specificity,f05,mcc = calculate_all_metrics(y_true,y_pred)
             if precision is not None and precision>=0.75:
                 # i want to add the preoperty "good_model" = 1 to best_for_stock[stock]
@@ -420,7 +459,8 @@ if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
             "file_created_after_20_03": 1,
             "good_model": good,
             "precision_after_cutoff":live_precision,
-            "cutoff_date": cutoff.strftime("%Y-%m-%d"),
+            "cutoff_date": cutoff.strftime("%Y-%m-%d %H:%M:%S"),
+            "lookahead_in_hours": LOOKAHEAD_NUMBER,
             "subset": subset         # a list that is already JSON serializable
         }
 else:
@@ -441,8 +481,9 @@ else:
             "training_precision": prec_training,
             "testing_length": testing_length,
             "file_created_after_20_03": 1,
+            "lookahead_in_hours": LOOKAHEAD_NUMBER,
             "subset": subset          # a list that is already JSON serializable
         }
 with open("models_to_use.json", "w") as f:
-    json.dump(output_data, f, indent=4)
+    json.dump(output_data, f, indent=4, default=str)
 print("Data saved to models_to_use.json")

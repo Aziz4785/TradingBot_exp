@@ -20,7 +20,7 @@ cleanup_files(['models_to_use.json', 'bins_json.json','clean.csv'])
 #load available_features_by_stock.json
 with open('available_features_by_stock.json') as f:
     available_features_by_stock = json.load(f)
-df = pd.read_csv(f"C:/Users/aziz8/Documents/tradingBot/raw.csv")
+df = pd.read_csv(f"raw.csv")
 print("length of df before dropping duplicates : ",len(df))
 df = df.drop_duplicates()
 #delete rows where column Close is None
@@ -351,7 +351,7 @@ def bin_column(dataframe, col_name, num_bins, drop_original=True, display=False,
 
 df.drop(columns=["Open", "High","Low","High_10","Low_10","High_20","Low_20","dayOpen", "dayClose", "prevDayOpen","prevDayClose" ,"prev2DayOpen","Close_1_day_ago","PM_max_time_in_sec"
                  ,"PM_min_time_in_sec","AH_max","Close_2_days_ago","prev2DayClose","PM_max_1dayago","AH_max_1dayago","Open_1_day_ago","dayHigh",
-                 "dayHigh_1","dayHigh_2","dayHigh_3","prevDayLow","dayLow","EMA_3","EMA_13","EMA_48","PM_max","PM_min"], inplace=True)
+                 "dayHigh_1","dayHigh_2","dayHigh_3","prevDayLow","dayLow","EMA_3","EMA_13","EMA_48","PM_max","PM_min","prev_close","prev2_close","prev3_close","prev4_close","prev5_close","prev6_close","prev7_close","prev8_close","prev9_close"], inplace=True)
 
 
 bin_dict = {}
@@ -370,22 +370,23 @@ six_bins_columns = ['return_1d','return_2d','open_to_prev_close','PM_time_diff',
                     'Volume','slope_a_vol_rel','coef_p_vol_rel','coef_q_vol_rel','STD_10','STD_30']
 
 for col in six_bins_columns:
-    try:
-        if col =='PM_time_diff' :# or col=='Close':
-            bin_dict[col] = bin_column(df, col, num_bins=4, drop_original=True, display=False, use_quantile=False)
-        elif col =='Close' or col=='Volume':
-            bin_dict[col] = bin_column(df, col, num_bins=11, drop_original=False, display=False, use_quantile=False)
-        elif col=='STD_10' or col=='STD_30':
-            bin_dict[col] = bin_column(df, col, num_bins=8)
-        else:
-            bin_dict[col] = bin_column(df, col, num_bins=6)
-    except ValueError as e:
-        print(f"Error occurred with column: {col}")
-        print(f"Error message: {str(e)}")
-        print(f"Sample of column data:\n{df[col].head()}")
-        print(f"Column unique values: {df[col].nunique()}")
-        print(f"Column value counts:\n{df[col].value_counts()}")
-        sys.exit(1) 
+    if col in df.columns:
+        try:
+            if col =='PM_time_diff':# or col=='Close':
+                bin_dict[col] = bin_column(df, col, num_bins=4, drop_original=True, display=False, use_quantile=False)
+            elif col =='Close' or col=='Volume':
+                bin_dict[col] = bin_column(df, col, num_bins=11, drop_original=False, display=False, use_quantile=False)
+            elif col=='STD_10' or col=='STD_30':
+                bin_dict[col] = bin_column(df, col, num_bins=8)
+            else:
+                bin_dict[col] = bin_column(df, col, num_bins=6)
+        except ValueError as e:
+            print(f"Error occurred with column: {col}")
+            print(f"Error message: {str(e)}")
+            print(f"Sample of column data:\n{df[col].head()}")
+            print(f"Column unique values: {df[col].nunique()}")
+            print(f"Column value counts:\n{df[col].value_counts()}")
+            sys.exit(1) 
 df.to_csv('clean.csv', encoding='utf-8', index=False)
 #with open(f"bins.pkl", "wb") as f:
     #pickle.dump(bin_dict, f)

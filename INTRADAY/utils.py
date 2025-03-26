@@ -308,8 +308,8 @@ def balance_binary_target(df, target_column):
 
 def additional_ratios(df,available_features_by_stock=None):
     df = df.copy()
-    if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
-        df['PM_time_diff'] = df['PM_max_time_in_sec'] - df['PM_min_time_in_sec']
+    #if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
+        #df['PM_time_diff'] = df['PM_max_time_in_sec'] - df['PM_min_time_in_sec']
     if available_features_by_stock is None or ('PM_max' in available_features_by_stock and 'PM_min' in available_features_by_stock): 
         df['PM_max_to_min_ratio'] = df['PM_max'] / df['PM_min']
     if available_features_by_stock is None or ('PM_min' in available_features_by_stock and 'dayOpen' in available_features_by_stock):
@@ -491,13 +491,19 @@ def calculate_highs_and_lows(df):
     return df
 
 def add_shifted_fractional_diff_from_DEPRADO(df):
+    #target_date = pd.Timestamp("2025-03-04 10:00:00")
+    #previous_rows = df.loc[:target_date].iloc[-21:-1][['Close']]
+    #print(previous_rows)
+    #target_pos = df.index.get_loc(target_date)
     max_shift = 14
+    #print(f"Original 'Close' value at {target_date}: {df.at[target_date, 'Close']}")
     for shift in range(1, max_shift + 1):
         col_name = get_col_name(shift)
         if 'Stock' in df.columns:
             df[col_name] = df.groupby('Stock')['Close'].shift(shift)
         else:
             df[col_name] = df['Close'].shift(shift)
+
     coeffs = [1, -0.8, -0.08, -0.032, -0.0176, -0.0113, -0.0079, -0.0059,
           -0.0045, -0.0036, -0.003, -0.0025, -0.0021]  
     for fd, offset in zip(['FD_1', 'FD_2', 'FD_3'], [0, 1, 2]):
