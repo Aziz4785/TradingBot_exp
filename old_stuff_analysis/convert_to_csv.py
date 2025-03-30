@@ -52,7 +52,9 @@ for folder in folders:
                 row["std_precision_by_month"]= model_info.get("std_precision_by_month", None)
                 row["training_precision"]= model_info.get("training_precision", None)
                 row["file_created_after_20_03"]= model_info.get("file_created_after_20_03", 0)
-                
+                row["lookahead_in_hours"]= model_info.get("lookahead_in_hours", 0)
+                row["number_of_red_slopes_in_test"]= model_info.get("number_of_red_slopes_in_test", None)
+                row["number_of_red_slopes_in_train"]= model_info.get("number_of_red_slopes_in_train", None)
                 training_length = model_info.get("training_length", None)
                 testing_length = model_info.get("testing_length", None)
                 ratio = None 
@@ -72,6 +74,8 @@ for folder in folders:
                     row["Model_type"]="XGB"
                 elif row["Model"].startswith("DT"):
                     row["Model_type"]="DT"
+                elif row["Model"].startswith("BG"):
+                    row["Model_type"]="BG"
                 else:
                     row["Model_type"]="Other"
                 
@@ -93,12 +97,18 @@ df = pd.DataFrame(csv_data)
 
 nan_forbidden_in_these_cols = ["Ticker", "Model","Model_type", "Precision", "Specificity", "Recall", "good_model"]
 none_percentages = df.isna().mean() * 100
+
 df.dropna(subset=nan_forbidden_in_these_cols, inplace=True)
-for column, percentage in none_percentages.items():
+
+none_percentages2 = df.drop(columns=features_set).isna().mean() * 100
+print(none_percentages2)
+
+for column in df.columns:
     if column not in features_set:
+        percentage = df[column].isna().mean() * 100
         print(f"{column}: {percentage:.2f}%")
-        # If a column has more than 10% missing values, prompt the user
-        if percentage > 10 and column not in nan_forbidden_in_these_cols:
+        
+        if percentage >1 and column not in nan_forbidden_in_these_cols:
             print(f"\nColumn '{column}' has {percentage:.2f}% missing values.")
             action = input("Enter 'c' to drop the column, 'r' to drop rows with NaN in this column, or any other key to skip: ")
             

@@ -95,6 +95,15 @@ def print_percentiles(df):
         return
     for column in df.columns:
         if column not in columns_to_skip:
+            unique_vals = set(df[column].dropna().unique())
+            # Check if the column is binary (only contains 0 and 1)
+            if unique_vals == {0, 1}:
+                print(f"Column: {column}")
+                 # Filter the rows where the binary column is 1 
+                subset = df[df[column] == 1]
+                # Calculate the percentage of rows where TARGET is 1 (ignoring -1 and 0)
+                percentage_target_ones = (subset[target_column] == 1).mean() * 100
+                print(f"If we keep only rows where {column} is 1, the percentage of 1s in TARGET is {percentage_target_ones:.2f}%")
             if df[column].nunique() < 4:
                 continue
             print(f"{column}:")

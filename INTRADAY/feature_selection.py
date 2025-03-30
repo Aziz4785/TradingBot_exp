@@ -19,7 +19,7 @@ import json
 from sklearn.preprocessing import LabelEncoder
 from utils import * 
 
-model = RandomForestClassifier(n_estimators=200,max_features=0.3,min_weight_fraction_leaf=0.05, max_depth=8)
+model = RandomForestClassifier(n_estimators=150, max_features=None, max_depth=3)
 TARGET_COLUMN = 'to_buy_1d'
 USE_STOCK_COLUMN = False
 BALANCE_DATA = False
@@ -28,16 +28,15 @@ df = pd.read_csv('clean.csv')
 df = df.sample(frac=1).reset_index(drop=True)
 df.drop_duplicates(inplace=True)
 df = df.dropna(subset=[TARGET_COLUMN])
-df = df.dropna()
+#df = df.dropna()
 #df = df[df['Stock']=='PG']
-df = df[df['Stock'].isin(['KO','PG','RKLB'])].copy()
+df = df[df['Stock'].isin(['KO'])].copy()
 missing_fraction = df.isna().mean()
 good_columns = missing_fraction[missing_fraction < 0.05].index.tolist()
 df = df.dropna(subset=good_columns)
 
 features_to_exclude = ['PM_time_diff_class']
-df = df.drop(columns=features_to_exclude)
-random.seed(9)
+df = df.drop(columns=features_to_exclude,errors='ignore')
 
 def try_multiple_feature_selection(X_train_scaled, X_test_scaled, y_train, y_test, 
                                  model, k, feature_names,X_train_scaled_df,X_test_scaled_df): #k is the number of features to be selected
@@ -103,17 +102,22 @@ def try_multiple_feature_selection(X_train_scaled, X_test_scaled, y_train, y_tes
     best_features = None
     best_precision = 0
     best_features_precision = None
-    for i in range(300): #PUT 120
-        if i%90==0:
+    for i in range(500): 
+        if i%150==0:
             print(f"{i} -> {best_fbeta }")
-        selected_features = random.sample(list(feature_names), k)
+        other_features = [f for f in feature_names if f != "dayOpen_to_prev2DayOpen_ratio_class"]
+        selected_features = random.sample(other_features, k - 1) + ["dayOpen_to_prev2DayOpen_ratio_class"]
+        #selected_features = random.sample(list(feature_names), k) #uncomment if you don't want to force include
         X_selected_train = X_train_scaled_df[selected_features]
         X_selected_test = X_test_scaled_df[selected_features]
         #X_selected = X_train_scaled[selected_features]
         model.fit(X_selected_train, y_train)
         y_pred = model.predict(X_selected_test)
         #accuracy = accuracy_score(y_test, y_pred)
-        fbeta = fbeta_score(y_test, y_pred, average='macro', beta=0.25)
+        if np.all(y_pred == 0):
+            fbeta = 0
+        else:
+            fbeta = fbeta_score(y_test, y_pred, beta=0.15)
         precision = precision_score(y_test, y_pred, zero_division=0)
         if fbeta > best_fbeta :
             best_fbeta  = fbeta
@@ -135,7 +139,6 @@ percentages = df[['to_buy_1d']].mean() * 100
 print(percentages.round(2).to_string()) 
 if USE_STOCK_COLUMN:
     encoder = LabelEncoder()
-    # Fit the encoder to the unique stock symbols and transform
     df['Stock_encoded'] = encoder.fit_transform(df['Stock'])
 
 
@@ -143,15 +146,11 @@ drop_columns = ['Stock', 'Date', 'Close', TARGET_COLUMN,
                 'to_buy_1d', 'to_buy_2d', 'to_buy_1d31', 
                 'to_buy_intraday', "PM_max", "PM_min","prev_close"]
 X = df.drop(columns=drop_columns, errors='ignore')
-# y = df[TARGET_COLUMN]
-# X_train, X_test, y_train, y_test = train_test_split(
-#     X, y, test_size=0.25, random_state=42, stratify=y
-# )
 
 df["Date"] = pd.to_datetime(df["Date"])
 today = pd.to_datetime("today").normalize()
-train_start = today - pd.Timedelta(days=300) #put 300
-train_end   = today - pd.Timedelta(days=50) 
+train_start = today - pd.Timedelta(days=300) 
+train_end   = today - pd.Timedelta(days=40) 
 mask_train = (df["Date"] >= train_start) & (df["Date"] < train_end)
 mask_test  = (df["Date"] >= train_end)   & (df["Date"] <= today)
 df_train = df[mask_train]
@@ -172,13 +171,11 @@ X_test_scaled_df = pd.DataFrame(X_test_scaled,
                                 columns=X_test.columns, 
                                 index=X_test.index)
 
-
-# Usage example:
-for k in range(2, 14, 1):
+for k in range(2, 10, 1):
     print(f"-----number of features: {k}")
     results = try_multiple_feature_selection(X_train_scaled, X_test_scaled, 
                                               y_train, y_test, model, k, 
-                                              X.columns,X_train_scaled_df,X_test_scaled_df)
+                                              X_train.columns,X_train_scaled_df,X_test_scaled_df)
 
     for method, result in results.items():
         print(f"\n{method.upper()} Selection:")
@@ -199,13 +196,6 @@ for k in range(2, 14, 1):
 
 
 """
-RANDOM_METHOD Selection:
-fbeta: 0.5879
+fbeta: 0.8479
 Selected Features:
-['return_1d_to_return_2d_ratio_class', 'vol_5_class', 'PM_max_to_PM_min_ratio_class', 'PM_min_to_open_ratio_class']
-
-RANDOM_METHOD Selection:
-fbeta: 0.6183
-Selected Features:
-['PM_max_to_min_ratio', 'FD_1', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class', 'Close_to_prevDayHigh_class', 'PM_min_to_Close_ratio_class']
-"""
+['day_of_week', 'dayOpen_to_prevDayOpen_ratio_class']"""

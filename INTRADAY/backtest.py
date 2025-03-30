@@ -37,13 +37,15 @@ from SuperModel import *
 import matplotlib.pyplot as plt
 pd.options.display.max_rows = None
 
-config_path = "old_stuff28/models_to_use.json"
-models_dir  = "old_stuff28/allmodels"
-scalers_dir = "old_stuff28/allscalers"
-clean_path = "old_stuff28/clean.csv"
-bins_file = "old_stuff28/bins_json.json"
-start_date = "2025-02-02"
-end_date   = "2025-03-25"
+config_path = "old_stuff25/models_to_use.json"
+models_dir  = "old_stuff25/allmodels"
+scalers_dir = "old_stuff25/allscalers"
+clean_path = "old_stuff25/clean.csv"
+bins_file = "old_stuff25/bins_json.json"
+start_date = "2025-02-05"
+end_date   = "2025-03-27"
+#dont forget to set the cutoff!!!!!!!!!!!!!!!!(see below)
+
 # with open('available_features_by_stock.json') as f:
 #     available_features_by_stock = json.load(f)
 
@@ -63,7 +65,7 @@ df = clean_df.dropna(subset=good_columns)
 
 clean_df["Date"] = pd.to_datetime(clean_df["Date"])
 #beginning_of_unseen_data = clean_df['Date'].max()
-beginning_of_unseen_data =  pd.to_datetime("2025-02-26 17:00") #cutoff
+beginning_of_unseen_data =  pd.to_datetime("2025-03-09 17:00") #cutoff
 
 
 with open(config_path, 'r') as file:
@@ -163,8 +165,8 @@ def dataDataframe(symbols, TradeApp_obj):
     "Returns historical data for each symbol in a dictionary of DataFrames."
     df_data = {}
     for symbol in symbols:
-        #print("symbol : ",symbol)
-        #print("symbols.index(symbol) : ",symbols.index(symbol))
+        print("symbol : ",symbol)
+        print("symbols.index(symbol) : ",symbols.index(symbol))
         df = pd.DataFrame(TradeApp_obj.data[symbols.index(symbol)])
         #df.set_index("Date", inplace=True)
         df_data[symbol] = df
@@ -396,16 +398,18 @@ for ticker in tickers:
         good_ticker = -1
     print(f"{ticker}  = {precision}    -> {good_ticker}")
     print(f"   \"good_model\": {good_ticker},")
+    if precision is None:
+        precision = -1
     print(f"   \"precision_after_cutoff\": {precision},")
 
-    if ticker in ['IDXX','JPM','TRV','MA','TEAM','MCD','LMT','CRWD','PFE','NUE',
+    """if ticker in ['IDXX','JPM','TRV','MA','TEAM','MCD','LMT','CRWD','PFE','NUE',
                   'QQQ','XOM','JNJ','WU','VZ','NFLX']:
         print("because ]start date = ",start_date)
         print(f"and enddate = {end_date}]")
         print(f"True Positives (TP): {true_positives}")
         print(f"and number of false positives (0 predicted as 1)= {false_positives}")
         print(f"True Negatives (TN): {true_negatives}")
-        print(f"False Negatives (FN): {false_negatives}")
+        print(f"False Negatives (FN): {false_negatives}")"""
 
 
 

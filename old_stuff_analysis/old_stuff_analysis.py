@@ -162,6 +162,10 @@ def count_model_types():
                             model_counter["DT"] += 1
                             if goodmodel:
                                 model_counter_good_models_only["DT"] += 1
+                        elif model_name.startswith("BG"):
+                            model_counter["BG"] += 1
+                            if goodmodel:
+                                model_counter_good_models_only["BG"] += 1
                         else:
                             model_counter["Other"] += 1
                             if goodmodel:

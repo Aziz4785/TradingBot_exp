@@ -306,6 +306,21 @@ def balance_binary_target(df, target_column):
         df = df.drop(indices_to_remove)
     return df
 
+def extract_number_of_neg_slopes(df_stock):
+    df_stock = df_stock.sort_values(['Date'])
+    """
+    Count how many times 'Close' decreases between two consecutive rows.
+    
+    Parameters:
+        df_stock (pd.DataFrame): A DataFrame filtered for a specific stock, 
+                                 sorted by 'Date'.
+    
+    Returns:
+        int: Number of times the 'Close' value decreases between consecutive rows.
+    """
+    close_diff = df_stock['Close'].diff()
+    return (close_diff < 0).sum()
+
 def additional_ratios(df,available_features_by_stock=None):
     df = df.copy()
     #if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 

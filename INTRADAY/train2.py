@@ -23,9 +23,9 @@ from utils import *
 
 TARGET = 'to_buy_1d'
 SAVE_MODEL= 1
-TESTING_LENGTH_IN_DAYS = 10
+TESTING_LENGTH_IN_DAYS = 28
 TRAINING_STARTING_LAG = 300
-LOOKAHEAD_NUMBER = 24
+LOOKAHEAD_NUMBER = 5
 USE_THIS_SCRIPT_FOR_METADATA_GENERATION = 1 #if false it means we use it to generate files for live trading
 #if true it means we will generate files that will help us find the best meta parameters for the model
 
@@ -56,11 +56,13 @@ today = pd.to_datetime("today")
 
 #all_data = all_data.dropna()
 if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
-    cutoff = today.normalize() - pd.Timedelta(days=random.randint(8, 35))
+    cutoff = today.normalize() - pd.Timedelta(days=random.randint(8, 65))
     cutoff = cutoff + pd.Timedelta(hours=17)  # Set cutoff time at 17H
 
     TESTING_LENGTH_IN_DAYS = random.randint(2, 80)
-    TRAINING_STARTING_LAG = random.randint(270, 350)
+    TRAINING_STARTING_LAG=int(TESTING_LENGTH_IN_DAYS * 9.2)
+    #TRAINING_STARTING_LAG = random.randint(270, 350)  
+    #it is better to have TESTING_LENGTH_IN_DAYS/TRAINING_STARTING_LAG >0.081  and <=0.103
     print("cutoff = ",cutoff)
     print("TESTING_LENGTH_IN_DAYS = ",TESTING_LENGTH_IN_DAYS)
     print("TRAINING_STARTING_LAG = ",TRAINING_STARTING_LAG)
@@ -77,6 +79,7 @@ else:
     cutoff = today 
     # because each row's label depends on data in the next 24 hours (approx).
     lookahead = pd.Timedelta(hours=LOOKAHEAD_NUMBER)
+    print("lookahead = ",lookahead)
 
 train_start = cutoff.normalize() - pd.Timedelta(days=TRAINING_STARTING_LAG)
 train_end   = cutoff - pd.Timedelta(days=TESTING_LENGTH_IN_DAYS) #we don't normalize because lets say cutoff ends at 17H (end of market session), so test should also end at 17H (end of market session)
@@ -127,6 +130,7 @@ models = {
     'RF9': RandomForestClassifier(n_estimators=200,max_features=0.3,min_weight_fraction_leaf=0.05, max_depth=8),
 
     'BG1': BaggingClassifier(estimator=DecisionTreeClassifier(criterion='entropy',class_weight='balanced', max_depth=10),n_estimators=100,max_samples=0.7,bootstrap=True),
+    'BG2': BaggingClassifier(estimator=DecisionTreeClassifier(criterion='entropy',class_weight='balanced',max_depth=8,min_weight_fraction_leaf=0.05, max_features=0.4),n_estimators=100,max_samples=0.5,bootstrap=True,n_jobs=-1),
 
     'XGB1': XGBClassifier(n_estimators=100),
     #'XGB3':XGBClassifier(n_estimators=300,colsample_bytree= 0.9,gamma=0.1,learning_rate=0.1,max_depth=7,min_child_weight=1,subsample=0.7),
@@ -171,7 +175,12 @@ feature_subsets = [
     ['dayOpen_to_prevDayOpen_ratio_class', 'PM_time_diff_class', 'date_after_0924', 'high_quad_p_rel_class', 'prev2DayClose_to_prevDayClose_ratio_class', 'PM_max_vs_PM_max_1dayago_class'], #TSLA
     ['PM_max_to_dayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_Close_ratio_class','PM_time_diff_class','prev2DayClose_to_prevDayClose_ratio_class','day_of_week','PM_min_to_open_ratio_class','PM_max_to_prevDayClose_ratio_class','Close_to_open_ratio_class'],
     ['prev2DayClose_to_prevDayClose_ratio_class','dayOpen_to_prev2DayOpen_ratio_class','PM_min_to_open_ratio_class','dayOpen_to_prevDayOpen_ratio_class','AH_max_1dayago_vs_prevDayClose_class','PM_min_to_Close_ratio_class'],
-    ['PM_max_to_min_ratio', 'FD_1', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class', 'Close_to_prevDayHigh_class', 'PM_min_to_Close_ratio_class'],
+    ['FD_1', 'dayOpen_to_prevDayOpen_ratio_class', 'PM_max_vs_PM_max_1dayago_class', 'Close_to_prevDayHigh_class', 'PM_min_to_Close_ratio_class'],
+    ['close_to_High10_class','date_after_0924','PM_max_to_Close_ratio_class','return_2d_class','Open_1_day_ago_to_Close_1_day_ago_ratio_class','Close_to_prevDayClose_class','PM_min_to_prevDayOpen_ratio_class','high_quad_q_rel_class','PM_range_to_open_ratio_class'],
+    ['date_after_0125', 'Volume_class', 'AH_max_1dayago_vs_prevDayClose_class', 'FD_1', 'Close_to_prevDayClose_class'],
+    ['Volume_class', 'dayOpen_to_prev2DayOpen_ratio_class', 'PM_volume_max_class', 'PM_volume_sum_class', 'Volume3', 'PM_max_vs_PM_max_1dayago_class', 'Close_to_prevDayClose_class'],
+    ['prev2DayClose_to_prevDayClose_ratio_class', 'slope_a_vol_rel_class', 'open_to_prev_close_class', 'Close_to_prevDayClose_class'],
+    ['day_of_week', 'dayOpen_to_prevDayOpen_ratio_class'],
     ]
 
 unique_stocks_list = df['Stock'].unique().tolist()
@@ -179,7 +188,7 @@ print(f"there are {len(unique_stocks_list)} unique stocks")
 best_for_stock = {}
 stock_added_counter = set()
 for stock in unique_stocks_list: 
-    if len(stock_added_counter)>5:
+    if USE_THIS_SCRIPT_FOR_METADATA_GENERATION and len(stock_added_counter)>5:
         break
     print("stock : ",stock)
     available_features = []
@@ -195,6 +204,8 @@ for stock in unique_stocks_list:
     df_stock = df_stock.dropna(subset=good_columns)
 
     init_percentage_of_1s = df_stock[TARGET].mean() * 100
+    if init_percentage_of_1s>45:
+        print("skipping because init_percentage_of_1s is too big")
     df_stock['Time'] = df_stock['Date'].dt.strftime('%H:%M')
     print("initial train end : ",train_end)
     adjusted_train_end = train_end - lookahead
@@ -212,16 +223,29 @@ for stock in unique_stocks_list:
         print(f"test_global on [{test_split_global_start}, {test_split_global_end}]")
     df_stock_train = df_stock[mask_train]
     df_stock_test  = df_stock[mask_test]
+
+    number_of_red_slopes_in_test = extract_number_of_neg_slopes(df_stock_test)
+    number_of_red_slopes_in_train = extract_number_of_neg_slopes(df_stock_train)
     training_length = len(df_stock_train)
     testing_length = len(df_stock_test)
+    test_train_ratio = testing_length/(testing_length+training_length)
+    print("test_train_ratio = ",test_train_ratio)
+    if test_train_ratio<0.08 or test_train_ratio>0.12:
+        print("ratio not valid")
+        continue
     if TESTING_LENGTH_IN_DAYS>=40:
         df_stock_test1 = df_stock[mask_test1]
         df_stock_test2 = df_stock[mask_test2]
         df_stock_test_global = df_stock[mask_test_global]
+
+    df_stock['Month'] = df_stock['Date'].dt.to_period('M').astype(str)
+    groups_by_month = list(df_stock.groupby('Month'))
     for i, subset in enumerate(feature_subsets):
         if i %12 ==0:
             print("  subset: ",i)
         valid_columns = [col for col in subset if col in df_stock_train.columns and col in available_features]
+        if not valid_columns:
+            continue
         X_train = df_stock_train[valid_columns]
         y_train = df_stock_train[TARGET]
         X_test = df_stock_test[valid_columns]
@@ -242,7 +266,7 @@ for stock in unique_stocks_list:
         if TESTING_LENGTH_IN_DAYS>=40:
             X_test_scaled_firstHalf = scaler.transform(X_test_part1)
             X_test_scaled_secondHalf = scaler.transform(X_test_part2)
-            X_test_scaled_global = scaler.transform(X_test_global)
+            #X_test_scaled_global = scaler.transform(X_test_global)
         #X_all_scaled = scaler.transform(X_all)
 
         scaler_already_saved = False
@@ -254,7 +278,7 @@ for stock in unique_stocks_list:
             if TESTING_LENGTH_IN_DAYS>=40:
                 y_pred_first_half = model.predict(X_test_scaled_firstHalf)
                 y_pred_second_half = model.predict(X_test_scaled_secondHalf)
-                y_pred_global = model.predict(X_test_scaled_global)
+                #y_pred_global = model.predict(X_test_scaled_global)
                 #y_pred_all = model.predict(X_all_scaled)
 
             #check trainign accuracy
@@ -274,20 +298,21 @@ for stock in unique_stocks_list:
             if TESTING_LENGTH_IN_DAYS>=40:
                 prec_h1,_,spec_half1,_,_ = calculate_all_metrics(y_test_part1,y_pred_first_half)
                 prec_h2,_,spec_half2,_,_ = calculate_all_metrics(y_test_part2,y_pred_second_half)
-                prec_global,_,spec_global,_,_ = calculate_all_metrics(y_test_global,y_pred_global)
+                #prec_global,_,spec_global,_,_ = calculate_all_metrics(y_test_global,y_pred_global)
 
-                if any(metric is None for metric in [prec_h1, spec_half1, prec_h2, spec_half2, prec_global, spec_global]):
+                if any(metric is None for metric in [prec_h1, spec_half1, prec_h2, spec_half2,]):# prec_global, spec_global]):
                     continue
                 if (min(spec_half1, spec_half2) < 0.7 or
-                    abs(spec_half1 - spec_half2) > 0.25 or
-                    min(prec_h2, prec_global) < 0.7 or
-                    abs(prec_h1 - prec_global) > 0.25 or 
-                    min(prec_h2, prec_global) < 0.7):
+                    abs(spec_half1 - spec_half2) > 0.4): #or
+                    #min(prec_h2, prec_global) < 0.7) or
+                    #abs(prec_h1 - prec_global) > 0.4 or 
+                    #min(prec_h2, prec_global) < 0.7):
                     # Model is not stable
                     continue
 
             stable_model = True
-            groups_by_month = list(df_stock.groupby(df_stock['Date'].dt.to_period('M').astype(str)))
+            #groups_by_month = list(df_stock.groupby(df_stock['Date'].dt.to_period('M').astype(str)))
+            
             min_precision_by_month = 999
             nbr_of_None_month_prec = 0
             std_precision_by_month = -1
@@ -306,7 +331,7 @@ for stock in unique_stocks_list:
                     nbr_of_None_month_prec += 1
                 if precision_month is not None:
                     precisions_by_month.append(precision_month)
-                if (precision_month is not None and precision_month < 0.7) or nbr_of_None_month_prec > 0.6 * min((len(groups_by_month)-2),1):
+                if (precision_month is not None and precision_month < 0.5) or nbr_of_None_month_prec > 0.7 * max((len(groups_by_month)-2),1):
                     stable_model = False
                     break 
             if not stable_model:
@@ -362,7 +387,7 @@ for stock in unique_stocks_list:
                 else:
                     precision,recall,specificity,f05,mcc = calculate_all_metrics(y_test,y_pred)
                 #print(f"{model_name} - Overall Accuracy: {accuracy:.2%} | Specificity: {specificity:.2%} | Precision: {precision:.2%}, Recall: {recall:.2%} | MCC: {mcc:.2f}")
-                if precision>0.75 and specificity>0.87 and recall>0 and precision<=0.92 and recall <=0.2: #and mcc>0.01
+                if precision>0.75 and specificity>0.87 and recall>0 :#and precision<=0.92 and recall <=0.2: #and mcc>0.01
                     model_name_to_save = f'{model_name}_{stock}_{i}'
                     stock_added_counter.add(stock)
                     if stock not in best_for_stock:
@@ -371,13 +396,13 @@ for stock in unique_stocks_list:
                         with open(f'{scaler_folder}/scaler_{i}_{stock}.pkl', 'wb') as scaler_file:
                             pickle.dump(scaler, scaler_file)
                         scaler_already_saved = True
-                        best_for_stock[stock] = (model_name_to_save, precision, specificity,recall,i,std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time,std_precision_by_month,training_length,prec_training,testing_length,valid_columns)
+                        best_for_stock[stock] = (model_name_to_save, precision, specificity,recall,i,std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time,std_precision_by_month,training_length,prec_training,testing_length,number_of_red_slopes_in_test,number_of_red_slopes_in_train,valid_columns)
                     else:
-                        _, best_prec, best_spec ,best_recall, _,_,_,_,_,_,_,_,_,_= best_for_stock[stock]
+                        _, best_prec, best_spec ,best_recall, _,_,_,_,_,_,_,_,_,_,_,_= best_for_stock[stock]
                         # Compare using your two criteria:
                         if (calculate_score(precision, specificity, recall) > calculate_score(best_prec, best_spec, best_recall)):
                             print(f"{model_name} - Overall Accuracy: {accuracy:.2%} | Specificity: {specificity:.2%} | Precision: {precision:.2%}, Recall: {recall:.2%} | MCC: {mcc:.2f}")
-                            best_for_stock[stock] = (model_name_to_save, precision, specificity,recall,i,std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time,std_precision_by_month,training_length,prec_training,testing_length,valid_columns)
+                            best_for_stock[stock] = (model_name_to_save, precision, specificity,recall,i,std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time,std_precision_by_month,training_length,prec_training,testing_length,number_of_red_slopes_in_test,number_of_red_slopes_in_train,valid_columns)
                             with open(f'{folder}/{model_name_to_save}.pkl', 'wb') as model_file:
                                 pickle.dump(model, model_file)
                             if not scaler_already_saved:
@@ -389,7 +414,7 @@ for stock in unique_stocks_list:
         if stock in best_for_stock:
             print(f"this stock has a model we will compute the precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)}")
             #test the model on original_df after cutoff
-            model_name, _, _,_,features_id,_,_,_,_,_,_,_,_,features_for_prediction = best_for_stock[stock]
+            model_name, _, _,_,features_id,_,_,_,_,_,_,_,_,_,_,features_for_prediction = best_for_stock[stock]
             with open(f'{folder}/{model_name}.pkl', 'rb') as model_file:
                 model = pickle.load(model_file)
             with open(f'{scaler_folder}/scaler_{features_id}_{stock}.pkl', 'rb') as scaler_file:
@@ -404,13 +429,13 @@ for stock in unique_stocks_list:
             print(f"backtest on ]{cutoff}, {cutoff+pd.Timedelta(days=6)}]")
             y_true = df_stock[TARGET]
             X = df_stock[features_for_prediction]
-            X.to_csv(f"debug_{stock}_X_pre_scaled.csv", index=True)
+            #X.to_csv(f"debug_{stock}_X_pre_scaled.csv", index=True)
             X_scaled = scaler.transform(X)
             y_pred = model.predict(X_scaled)
 
             temp_df_stock = df_stock.copy()
             temp_df_stock['Predicted_Target'] = y_pred
-            temp_df_stock[['Stock', 'Date', 'Close', TARGET, 'Predicted_Target']].to_csv(f"debug_{stock}_from_train2.csv", index=True)
+            #temp_df_stock[['Stock', 'Date', 'Close', TARGET, 'Predicted_Target']].to_csv(f"debug_{stock}_from_train2.csv", index=True)
 
             cm = confusion_matrix(y_true, y_pred)
             if cm.size>=4:
@@ -440,7 +465,7 @@ for stock in unique_stocks_list:
 output_data = {}
 
 if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
-    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset,good,live_precision) in best_for_stock.items():
+    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,number_of_red_slopes_in_test,number_of_red_slopes_in_train,subset,good,live_precision) in best_for_stock.items():
         output_data[stock] = {
             "best_model": best_model,
             "precision": best_prec,     # raw float value (e.g., 0.95)
@@ -461,10 +486,12 @@ if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
             "precision_after_cutoff":live_precision,
             "cutoff_date": cutoff.strftime("%Y-%m-%d %H:%M:%S"),
             "lookahead_in_hours": LOOKAHEAD_NUMBER,
+            "number_of_red_slopes_in_test": number_of_red_slopes_in_test,
+            "number_of_red_slopes_in_train": number_of_red_slopes_in_train,
             "subset": subset         # a list that is already JSON serializable
         }
 else:
-    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,subset) in best_for_stock.items():
+    for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,number_of_red_slopes_in_test,number_of_red_slopes_in_train,subset) in best_for_stock.items():
         output_data[stock] = {
             "best_model": best_model,
             "precision": best_prec,     # raw float value (e.g., 0.95)
@@ -481,6 +508,7 @@ else:
             "training_precision": prec_training,
             "testing_length": testing_length,
             "file_created_after_20_03": 1,
+            "cutoff_date": cutoff.strftime("%Y-%m-%d %H:%M:%S"),
             "lookahead_in_hours": LOOKAHEAD_NUMBER,
             "subset": subset          # a list that is already JSON serializable
         }

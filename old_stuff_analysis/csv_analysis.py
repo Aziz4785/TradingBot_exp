@@ -10,7 +10,7 @@ df = pd.read_csv(f"old_stuff_analysis/all_models_to_csv.csv")
 df = df.drop_duplicates()
 target_column = "good_model"
 
-df = pd.get_dummies(df, columns=["Model_type", "Model"], prefix=["Model_type", "Model"])
+df = pd.get_dummies(df, columns=["Model_type", "Model","Ticker"], prefix=["Model_type", "Model","Ticker"])
 
 feature_columns = [col for col in df.columns if col not in ["Ticker", target_column]]
 df = df.dropna(subset=[target_column])  # Drop rows where target is NaN
@@ -48,6 +48,25 @@ plt.title("Decision Tree (0s as BAD)")
 plt.show()
 
 # IF WE CONSIDER 0s as GOOD
+df2_good = df.copy()
+n_pos = (df2_good[target_column] == 1).sum()
+n_neg = (df2_good[target_column] == -1).sum()
+n_zero = (df2_good[target_column] == 0).sum()
+print("n_pos = ",n_pos)
+print("n_neg = ",n_neg)
+print("n_zero = ",n_zero)
+# How many zeros we want to keep
+n_zero_to_keep = n_neg - n_pos
+n_zero_to_drop = n_zero - n_zero_to_keep
+print("n_zero_to_keep = ",n_zero_to_keep)
+print("n_zero_to_drop = ",n_zero_to_drop)
+# Drop the first n_zero_to_drop rows where target == 0
+df_zeros_to_drop = df2_good[df2_good[target_column] == 0].iloc[:n_zero_to_drop]
+df2_good = df2_good.drop(df_zeros_to_drop.index)
+# Convert remaining 0s to 1
+df2_good.loc[df2_good[target_column] == 0, target_column] = 1
+df2_good.to_csv('balanced_targets_with0good.csv', index=False)
+
 df_good = df.copy()  # Make a copy for this approach
 df_good["good_model"] = df_good["good_model"].replace(0, 1)
 X_good = df_good[feature_columns]
@@ -63,6 +82,7 @@ plt.show()
 df_filtered = df.copy()
 # Filter out rows where the target column equals 0
 df_filtered = df_filtered[df_filtered[target_column] != 0]
+df_filtered.to_csv("old_stuff_analysis/csv_without_0.csv", index=False)
 X_filtered = df_filtered[feature_columns]
 y_filtered = df_filtered[target_column]
 clf_filtered = DecisionTreeClassifier(max_depth=2, min_samples_leaf=4)
@@ -78,8 +98,8 @@ from sklearn.tree import plot_tree
 best_precision = 0
 best_features_precision = None
 best_model = None 
-for sample_size in range(1,8):
-    for i in range(6500):  
+for sample_size in range(1,12):
+    for i in range(8500):  
         if i % 1000 == 0:
             print(f"{i} -> {best_precision}")
         selected_features = random.sample(list(feature_columns), sample_size)

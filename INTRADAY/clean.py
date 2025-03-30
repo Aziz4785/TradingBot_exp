@@ -351,7 +351,7 @@ def bin_column(dataframe, col_name, num_bins, drop_original=True, display=False,
 
 df.drop(columns=["Open", "High","Low","High_10","Low_10","High_20","Low_20","dayOpen", "dayClose", "prevDayOpen","prevDayClose" ,"prev2DayOpen","Close_1_day_ago","PM_max_time_in_sec"
                  ,"PM_min_time_in_sec","AH_max","Close_2_days_ago","prev2DayClose","PM_max_1dayago","AH_max_1dayago","Open_1_day_ago","dayHigh",
-                 "dayHigh_1","dayHigh_2","dayHigh_3","prevDayLow","dayLow","EMA_3","EMA_13","EMA_48","PM_max","PM_min","prev_close","prev2_close","prev3_close","prev4_close","prev5_close","prev6_close","prev7_close","prev8_close","prev9_close"], inplace=True)
+                 "dayHigh_1","dayHigh_2","dayHigh_3","prevDayLow","dayLow","EMA_3","EMA_13","EMA_48","PM_max","PM_min","prev_close","prev2_close","prev3_close","prev4_close","prev5_close","prev6_close","prev7_close","prev8_close","prev9_close","prev10_close","prev11_close"], inplace=True)
 
 
 bin_dict = {}
@@ -365,7 +365,7 @@ six_bins_columns = ['return_1d','return_2d','open_to_prev_close','PM_time_diff',
                     'PM_min_to_prevDayOpen_ratio','PM_max_to_Close_ratio','PM_min_to_Close_ratio',
                     'high_slope_rel','high_quad_p_rel','high_quad_q_rel','Close_to_prevDayLow','Close_to_prevDayHigh',
                     'ema_ratio1','ema_ratio2','Close_to_EMA_48','close_to_High10',
-                    'close_to_Low10','close_to_High20','close_to_Low20','vol_50',
+                    'close_to_Low10','close_to_High20','close_to_Low20','vol_50','PM_max_to_min_ratio',
                     'vol_20','vol_5','return',"mom_5",'Close','PM_volume_sum','PM_volume_max',
                     'Volume','slope_a_vol_rel','coef_p_vol_rel','coef_q_vol_rel','STD_10','STD_30']
 
