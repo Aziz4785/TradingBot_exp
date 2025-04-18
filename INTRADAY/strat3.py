@@ -77,7 +77,7 @@ tickers = ["OKLO","META","AAPL","MSFT","JPM","V","AMZN","NKE","LRCX","PFE","VICI
            "AMD","NFLX","ASTS","CVS","SPY","CRWD","NEE","SBUX","LMT","COST",
            "QQQ","LLY","CRM","GS","WFC","VEEV","PM","IBM","VZ","XOM","VRTX",
            "FTNT","MA","PYPL","ANET","KKR","BAC","ABBV","PG","UNH","UA","UAL",
-           "HD","SHW","CAT","AMGN","MCD"] 
+           "HD","SHW","CAT","AMGN","MCD","ZS","JNPR"] 
 
 #DO NOT USE THESE STOCKS : 
 # LYB, AAP
@@ -88,7 +88,7 @@ tickers = ["OKLO","META","AAPL","MSFT","JPM","V","AMZN","NKE","LRCX","PFE","VICI
     time.sleep(5)"""
 for ticker in tickers:
     print(ticker)
-    histData(tickers.index(ticker), usTechStk(ticker), duration='260 D', candle_size= CANDLE_SIZE) 
+    histData(tickers.index(ticker), usTechStk(ticker), duration='270 D', candle_size= CANDLE_SIZE) 
     time.sleep(70) # Adding sleep to avoid pacing violation. Adjust as needed based on IBKR limits.
 
 ###################storing trade app object in dataframe#######################

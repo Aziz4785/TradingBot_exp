@@ -9,7 +9,7 @@ folders = [f for f in os.listdir(root_dir)
           if os.path.isdir(os.path.join(root_dir, f))
           and f.startswith("old_stuff")
           and f != "old_stuff_analysis"
-          and 6 <= int(f.replace("old_stuff", "")) <= 20]
+          and 6 <= int(f.replace("old_stuff", "")) <= 60]
 
 print("folders", folders)
 #old_stuff1 -> old_stuff5  (15 dernier jours de fevrier)

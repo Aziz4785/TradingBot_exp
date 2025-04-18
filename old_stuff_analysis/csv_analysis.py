@@ -65,7 +65,7 @@ df_zeros_to_drop = df2_good[df2_good[target_column] == 0].iloc[:n_zero_to_drop]
 df2_good = df2_good.drop(df_zeros_to_drop.index)
 # Convert remaining 0s to 1
 df2_good.loc[df2_good[target_column] == 0, target_column] = 1
-df2_good.to_csv('balanced_targets_with0good.csv', index=False)
+df2_good.to_csv('old_stuff_analysis/balanced_targets_with0good.csv', index=False)
 
 df_good = df.copy()  # Make a copy for this approach
 df_good["good_model"] = df_good["good_model"].replace(0, 1)
@@ -98,14 +98,14 @@ from sklearn.tree import plot_tree
 best_precision = 0
 best_features_precision = None
 best_model = None 
-for sample_size in range(1,12):
-    for i in range(8500):  
-        if i % 1000 == 0:
+for sample_size in range(1,14):
+    for i in range(12000):  
+        if i % 3000 == 0:
             print(f"{i} -> {best_precision}")
         selected_features = random.sample(list(feature_columns), sample_size)
         X_selected_train = df_filtered[selected_features]
         # Create a new instance for each iteration
-        model = DecisionTreeClassifier(max_depth=3, min_samples_leaf=7)
+        model = DecisionTreeClassifier(max_depth=4, min_samples_leaf=7)
         model.fit(X_selected_train, y_filtered)
         y_pred = model.predict(X_selected_train)
         precision = precision_score(y_filtered, y_pred, zero_division=0)

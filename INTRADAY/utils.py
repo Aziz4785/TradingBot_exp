@@ -321,6 +321,42 @@ def extract_number_of_neg_slopes(df_stock):
     close_diff = df_stock['Close'].diff()
     return (close_diff < 0).sum()
 
+def extract_redness_index(df_stock: pd.DataFrame) -> float:
+    """
+    Quantify how "red" a stock has been over the period in df_stock.
+
+    We compute pct_change() on 'Close', then sum:
+      - the absolute values of all negative returns
+      - all positive returns
+    The redness index is:
+        redness = (sum |negative returns|) / (sum |negative returns| + sum positive returns)
+
+    Parameters:
+        df_stock (pd.DataFrame): Must contain 'Date' and 'Close' columns.
+                                 'Date' need not be sorted.
+
+    Returns:
+        float: Redness index in [0,1]. 
+               1.0 ⇒ all moves were down; 
+               0.0 ⇒ all moves were up; 
+               0.5 ⇒ equal weight of up‑ and down‑magnitude.
+               np.nan if there are no non‑zero moves.
+    """
+    # ensure chronological order
+    df = df_stock.sort_values('Date')
+    # compute daily returns
+    returns = df['Close'].pct_change().dropna()
+
+    # separate positive and negative moves
+    neg_total = returns[returns < 0].abs().sum()
+    pos_total = returns[returns > 0].sum()
+    total = neg_total + pos_total
+
+    if total == 0:
+        return float('nan')  # no movement
+
+    return neg_total / total
+
 def additional_ratios(df,available_features_by_stock=None):
     df = df.copy()
     #if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 
