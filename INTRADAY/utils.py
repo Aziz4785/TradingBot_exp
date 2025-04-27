@@ -357,6 +357,18 @@ def extract_redness_index(df_stock: pd.DataFrame) -> float:
 
     return neg_total / total
 
+def compute_number_of_2reds_14window_startend(df_stock: pd.DataFrame) -> float:
+    #to do  : create a similar function, that compute the diff between max and min of the 14 days
+    df = df_stock.sort_values('Date').reset_index(drop=True)
+    if len(df) < 14:
+        return float('nan')
+    start_prices = df['Close'].iloc[:-13].values
+    end_prices = df['Close'].iloc[13:].values
+    red_count = np.sum(end_prices <= start_prices * 0.98)
+    
+    return red_count
+
+
 def additional_ratios(df,available_features_by_stock=None):
     df = df.copy()
     #if available_features_by_stock is None or ('PM_max_time_in_sec' in available_features_by_stock and 'PM_min_time_in_sec' in available_features_by_stock): 

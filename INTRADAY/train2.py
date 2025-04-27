@@ -24,10 +24,10 @@ from collections import defaultdict
 
 TARGET = 'to_buy_1d'
 SAVE_MODEL= 1
-TESTING_LENGTH_IN_DAYS = 28
-TRAINING_STARTING_LAG = 300
-LOOKAHEAD_NUMBER = 5
-USE_THIS_SCRIPT_FOR_METADATA_GENERATION = 1 #if false it means we use it to generate files for live trading
+#TESTING_LENGTH_IN_DAYS = 28
+#TRAINING_STARTING_LAG = 300
+#LOOKAHEAD_NUMBER = 5
+USE_THIS_SCRIPT_FOR_METADATA_GENERATION = 0 #if false it means we use it to generate files for live trading
 #if true it means we will generate files that will help us find the best meta parameters for the model
 
 cleanup_files(['models_to_use.json','model_output.csv','debugging_from_backtest.csv'])
@@ -55,35 +55,36 @@ df = df.dropna(subset=[TARGET])
 df["Date"] = pd.to_datetime(df["Date"])
 today = pd.to_datetime("today")
 
+TESTING_LENGTH_IN_DAYS = random.randint(2, 60)
+if TESTING_LENGTH_IN_DAYS<15:
+    TRAINING_STARTING_LAG=int(TESTING_LENGTH_IN_DAYS * random.uniform(10, 80))
+else:
+    TRAINING_STARTING_LAG=int(TESTING_LENGTH_IN_DAYS * random.uniform(8, 22))
+
 #all_data = all_data.dropna()
 if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
-    cutoff = today.normalize() - pd.Timedelta(days=random.randint(8, 65))
+    max_clean_date = df['Date'].max()
+    cutoff = max_clean_date.normalize() - pd.Timedelta(days=random.randint(11, 35)) 
     cutoff = cutoff + pd.Timedelta(hours=17)  # Set cutoff time at 17H
-
-    TESTING_LENGTH_IN_DAYS = random.randint(2, 60)
-    if TESTING_LENGTH_IN_DAYS<15:
-        TRAINING_STARTING_LAG=int(TESTING_LENGTH_IN_DAYS * random.uniform(10, 50))
-    else:
-        TRAINING_STARTING_LAG=int(TESTING_LENGTH_IN_DAYS * random.uniform(6, 22))
     #TRAINING_STARTING_LAG = random.randint(270, 350)  
     #it is better to have TESTING_LENGTH_IN_DAYS/TRAINING_STARTING_LAG >0.081  and <=0.103
-    print("cutoff = ",cutoff)
-    print("TESTING_LENGTH_IN_DAYS = ",TESTING_LENGTH_IN_DAYS)
-    print("TRAINING_STARTING_LAG = ",TRAINING_STARTING_LAG)
     original_df = df.copy()
     #delete all rows after cutoff
     df = df[df['Date']<=cutoff]
 
-    weights = [30 - i for i in range(30)]
-    LOOKAHEAD_NUMBER = random.choices(range(30), weights=weights, k=1)[0]
-    # because each row's label depends on data in the next 24 hours (approx).
-    lookahead = pd.Timedelta(hours=LOOKAHEAD_NUMBER)
-    print("lookahead = ",lookahead)
+    
 else:
     cutoff = today 
-    # because each row's label depends on data in the next 24 hours (approx).
-    lookahead = pd.Timedelta(hours=LOOKAHEAD_NUMBER)
-    print("lookahead = ",lookahead)
+
+print("cutoff = ",cutoff)
+print("TESTING_LENGTH_IN_DAYS = ",TESTING_LENGTH_IN_DAYS)
+print("TRAINING_STARTING_LAG = ",TRAINING_STARTING_LAG)
+
+weights = [30 - i for i in range(30)]
+LOOKAHEAD_NUMBER = random.choices(range(30), weights=weights, k=1)[0]
+# because each row's label depends on data in the next 24 hours (approx).
+lookahead = pd.Timedelta(hours=LOOKAHEAD_NUMBER)
+print("lookahead = ",lookahead)
 
 train_start = cutoff.normalize() - pd.Timedelta(days=TRAINING_STARTING_LAG)
 train_end   = cutoff - pd.Timedelta(days=TESTING_LENGTH_IN_DAYS) #we don't normalize because lets say cutoff ends at 17H (end of market session), so test should also end at 17H (end of market session)
@@ -113,19 +114,14 @@ if TESTING_LENGTH_IN_DAYS>=40:
 
 models = {
     'DT1': DecisionTreeClassifier(), 
-    #'DT2': DecisionTreeClassifier(max_depth=10, min_samples_split=4), this never give good results
     'DT3': DecisionTreeClassifier(max_depth=15, min_samples_leaf=5, min_samples_split=10),
     'DT4': DecisionTreeClassifier(max_depth=20, criterion='entropy', random_state=42),
-    #'DT5': DecisionTreeClassifier(min_samples_leaf=3, max_features='sqrt', max_depth=6),
     'DT6': DecisionTreeClassifier(max_depth=8),
-    #'DT7': DecisionTreeClassifier(max_depth=None,min_samples_split=5,min_samples_leaf=2,criterion='gini'), not good results
     'DT8':DecisionTreeClassifier(class_weight={0: 3.0, 1: 1.0}, max_depth=15, min_samples_leaf=5, min_samples_split=10),
     'DT9':DecisionTreeClassifier(class_weight={0: 2.0, 1: 1.0}, max_depth=4),
     'DT10':DecisionTreeClassifier(class_weight={0: 4.0, 1: 1.0}, max_depth=12, min_samples_leaf=5, min_samples_split=10),
 
     'RF1': RandomForestClassifier(n_estimators=100, max_features=0.5),
-    #'RF1a':RandomForestClassifier(n_estimators=100,max_features=0.5,min_impurity_decrease=0.01), #not good results
-    #'RF4a': RandomForestClassifier(n_estimators=100,max_features=None,min_samples_leaf=1,min_samples_split=2),
     'RF3': RandomForestClassifier(n_estimators=100, max_features=None, max_depth=12),
     'RF4': RandomForestClassifier(n_estimators=200, max_features='log2', max_depth=6), 
     'RF5': RandomForestClassifier(n_estimators=150, max_features=None, max_depth=3),
@@ -138,12 +134,8 @@ models = {
     'BG2': BaggingClassifier(estimator=DecisionTreeClassifier(criterion='entropy',class_weight='balanced',max_depth=8,min_weight_fraction_leaf=0.05, max_features=0.4),n_estimators=100,max_samples=0.5,bootstrap=True,n_jobs=-1),
 
     'XGB1': XGBClassifier(n_estimators=100),
-    #'XGB3':XGBClassifier(n_estimators=300,colsample_bytree= 0.9,gamma=0.1,learning_rate=0.1,max_depth=7,min_child_weight=1,subsample=0.7),
     'XGB7':XGBClassifier(n_estimators=300,colsample_bytree= 0.8,gamma=0.1,learning_rate=0.1,max_depth=5,min_child_weight=1,subsample=0.9),
     'XGB9':XGBClassifier(n_estimators=300,colsample_bytree= 0.8,gamma=0,learning_rate=0.1,max_depth=7,min_child_weight=1,subsample=0.7),
-    
-    #'XGB16':XGBClassifier(n_estimators=300,colsample_bytree=  0.9, gamma= 0, learning_rate=0.3,max_depth=8,min_child_weight=1,subsample=0.8),
-    #'XGB19':XGBClassifier(n_estimators=300, colsample_bytree=0.8, gamma=0, learning_rate=0.1, max_depth=7, min_child_weight=1, subsample=0.7, scale_pos_weight=3.0),
 }
 
 #with open('data.json', 'r') as file:
@@ -190,9 +182,10 @@ feature_subsets = [
 
 unique_stocks_list = df['Stock'].unique().tolist()
 print(f"there are {len(unique_stocks_list)} unique stocks")
+random.shuffle(unique_stocks_list)
 best_for_stock = {}
 if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
-    models_for_stock = defaultdict(list)
+    best_for_stock = defaultdict(list)
 stock_added_counter = set()
 for stock in unique_stocks_list: 
     if USE_THIS_SCRIPT_FOR_METADATA_GENERATION and len(stock_added_counter)>7:
@@ -236,14 +229,16 @@ for stock in unique_stocks_list:
     number_of_red_slopes_in_train = extract_number_of_neg_slopes(df_stock_train)
     test_redness_index = extract_redness_index(df_stock_test)
     train_redness_index = extract_redness_index(df_stock_train)
+    test_nbr_of_red2 = compute_number_of_2reds_14window_startend(df_stock_test)
+    train_nbr_of_red2 = compute_number_of_2reds_14window_startend(df_stock_train)
 
     training_length = len(df_stock_train)
     testing_length = len(df_stock_test)
     test_train_ratio = testing_length/(testing_length+training_length)
-    print("test_train_ratio = ",test_train_ratio)
-    if test_train_ratio<0.03 or test_train_ratio>0.3:
-        print("ratio not valid")
-        continue
+    #print("test_train_ratio = ",test_train_ratio)
+    #if test_train_ratio<0.03 or test_train_ratio>0.3:
+        #print("ratio not valid")
+        #continue
     if TESTING_LENGTH_IN_DAYS>=40:
         df_stock_test1 = df_stock[mask_test1]
         df_stock_test2 = df_stock[mask_test2]
@@ -398,13 +393,57 @@ for stock in unique_stocks_list:
                 else:
                     precision,recall,specificity,f05,mcc = calculate_all_metrics(y_test,y_pred)
                 #print(f"{model_name} - Overall Accuracy: {accuracy:.2%} | Specificity: {specificity:.2%} | Precision: {precision:.2%}, Recall: {recall:.2%} | MCC: {mcc:.2f}")
-                if precision>0.75 and specificity>0.87 and recall>0 :#and precision<=0.92 and recall <=0.2: #and mcc>0.01
+                if precision>0.75 and specificity>0.8 and recall>0 :#and precision<=0.92 and recall <=0.2: #and mcc>0.01
                     model_name_to_save = f'{model_name}_{stock}_{i}'
                     stock_added_counter.add(stock)
-                    if stock not in best_for_stock:
+                    
+                    scaler_name_to_save = f"scaler_{i}_{stock}"
+                    
+                    # save the model + scaler
+                    with open(f"{folder}/{model_name_to_save}.pkl", "wb") as mf:
+                        pickle.dump(model, mf)
+                    if not scaler_already_saved:
+                        with open(f"{scaler_folder}/{scaler_name_to_save}.pkl", "wb") as sf:
+                            pickle.dump(scaler, sf)
+                        scaler_already_saved = True
+
+                    # collect all the metadata you care about in a dict
+            
+                    meta = {
+                        "model_file": model_name_to_save,
+                        "scaler_file": scaler_name_to_save,
+                        "precision": precision,
+                        "specificity": specificity,
+                        "recall": recall,
+                        "subset_id": i,
+                        "testing_length_in_days": TESTING_LENGTH_IN_DAYS,
+                        "init_percentage_of_1s" :init_percentage_of_1s,
+                        "min_precision_by_time": min_precision_by_time,
+                        "std_precision_by_month": std_precision_by_month,
+                        "training_length": training_length,
+                        "training_precision": prec_training,
+                        "testing_length": testing_length,
+                        "file_created_after_20_03": 1,
+                        "number_of_red_slopes_in_test": number_of_red_slopes_in_test,
+                        "number_of_red_slopes_in_train": number_of_red_slopes_in_train,
+                        "test_nbr_of_red2": test_nbr_of_red2,
+                        "train_nbr_of_red2": train_nbr_of_red2,
+                        "train_redness_index": train_redness_index,
+                        "test_redness_index": test_redness_index,
+                        "std_precision_by_time": std_precision_by_time,
+                        "min_precision_by_month": min_precision_by_month,
+                        "cutoff_date": cutoff.strftime("%Y-%m-%d %H:%M:%S"),
+                        "lookahead_in_hours": LOOKAHEAD_NUMBER,
+                        "subset": valid_columns
+                    } #good_model and precision_after_cutoff to be added later 
+
+                    # append it to the list for this stock
+                    best_for_stock[stock].append(meta)
+
+                    """if stock not in best_for_stock:
                         with open(f'{folder}/{model_name_to_save}.pkl', 'wb') as model_file:
                             pickle.dump(model, model_file)
-                        with open(f'{scaler_folder}/scaler_{i}_{stock}.pkl', 'wb') as scaler_file:
+                        with open(f'{scaler_folder}/{scaler_name_to_save}.pkl', 'wb') as scaler_file:
                             pickle.dump(scaler, scaler_file)
                         scaler_already_saved = True
                         best_for_stock[stock] = (model_name_to_save, precision, specificity,recall,i,std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time,std_precision_by_month,training_length,prec_training,testing_length,number_of_red_slopes_in_test,number_of_red_slopes_in_train,train_redness_index,test_redness_index,valid_columns)
@@ -419,63 +458,84 @@ for stock in unique_stocks_list:
                             if not scaler_already_saved:
                                 with open(f'{scaler_folder}/scaler_{i}_{stock}.pkl', 'wb') as scaler_file:
                                     pickle.dump(scaler, scaler_file)
-                                scaler_already_saved=True
+                                scaler_already_saved=True"""
 
     if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
         if stock in best_for_stock:
-            print(f"this stock has a model we will compute the precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)}")
-            #test the model on original_df after cutoff
-            model_name, _, _,_,features_id,_,_,_,_,_,_,_,_,_,_,_,_,features_for_prediction = best_for_stock[stock]
-            with open(f'{folder}/{model_name}.pkl', 'rb') as model_file:
-                model = pickle.load(model_file)
-            with open(f'{scaler_folder}/scaler_{features_id}_{stock}.pkl', 'rb') as scaler_file:
-                scaler = pickle.load(scaler_file)
-            print(f"we will use the model {model_name} and scaler : scaler_{features_id}_{stock}.pkl to predict")
-            #rows of original_df after cutoff for that stock
-            df_stock = original_df[original_df['Stock'] == stock].copy()
-            #extract dates between cutoff and cutoff+6days
-            df_stock = df_stock[df_stock['Date'] > cutoff]
-            df_stock = df_stock[df_stock['Date'] <= cutoff+pd.Timedelta(days=6)]
-            
-            print(f"backtest on ]{cutoff}, {cutoff+pd.Timedelta(days=6)}]")
-            y_true = df_stock[TARGET]
-            X = df_stock[features_for_prediction]
-            #X.to_csv(f"debug_{stock}_X_pre_scaled.csv", index=True)
-            X_scaled = scaler.transform(X)
-            y_pred = model.predict(X_scaled)
+            for model_specs in best_for_stock[stock]:
+                print(f"this stock has a model we will compute the precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)}")
+                #test the model on original_df after cutoff
+                model_name = model_specs['model_file']
+                features_id = model_specs['subset_id']
+                scaler_name = model_specs['scaler_file']
+                features_for_prediction = model_specs['subset']
+                with open(f'{folder}/{model_name}.pkl', 'rb') as model_file:
+                    model = pickle.load(model_file)
+                with open(f'{scaler_folder}/{scaler_name}.pkl', 'rb') as scaler_file:
+                    scaler = pickle.load(scaler_file)
+                print(f"we will use the model {model_name} and scaler : {scaler_name}.pkl to predict")
+                #rows of original_df after cutoff for that stock
+                df_stock = original_df[original_df['Stock'] == stock].copy()
+                df_stock = df_stock[df_stock['Date'] > cutoff]
+                df_stock = df_stock[df_stock['Date'] <= cutoff+pd.Timedelta(days=6)]
+                if df_stock.empty:
+                    print(f"No rows for {stock} between {cutoff} and {cutoff+pd.Timedelta(days=6)}; skipping.")
+                    continue
+                print(f"backtest on ]{cutoff}, {cutoff+pd.Timedelta(days=6)}]")
+                y_true = df_stock[TARGET]
+                X = df_stock[features_for_prediction]
+                #X.to_csv(f"debug_{stock}_X_pre_scaled.csv", index=True)
+                X_scaled = scaler.transform(X)
+                y_pred = model.predict(X_scaled)
 
-            temp_df_stock = df_stock.copy()
-            temp_df_stock['Predicted_Target'] = y_pred
-            #temp_df_stock[['Stock', 'Date', 'Close', TARGET, 'Predicted_Target']].to_csv(f"debug_{stock}_from_train2.csv", index=True)
+                temp_df_stock = df_stock.copy()
+                temp_df_stock['Predicted_Target'] = y_pred
+                #temp_df_stock[['Stock', 'Date', 'Close', TARGET, 'Predicted_Target']].to_csv(f"debug_{stock}_from_train2.csv", index=True)
 
-            cm = confusion_matrix(y_true, y_pred)
-            if cm.size>=4:
-                TN, FP, FN, TP = cm.ravel()
-                precision = TP / (TP + FP) if (TP + FP) != 0 else 0
-                print("Confusion Matrix:")
-                print(cm)
-                print("\nDetailed Metrics:")
-                print(f"True Positives (TP): {TP}")
-                print(f"False Positives (FP): {FP}")
-                print(f"True Negatives (TN): {TN}")
-                print(f"False Negatives (FN): {FN}")
-                print(f"\nPrecision = TP / (TP + FP) = {TP} / ({TP} + {FP}) = {precision:.4f}")
+                cm = confusion_matrix(y_true, y_pred)
+                if cm.size>=4:
+                    TN, FP, FN, TP = cm.ravel()
+                    precision = TP / (TP + FP) if (TP + FP) != 0 else 0
+                    print("Confusion Matrix:")
+                    print(cm)
+                    print("\nDetailed Metrics:")
+                    print(f"True Positives (TP): {TP}")
+                    print(f"False Positives (FP): {FP}")
+                    print(f"True Negatives (TN): {TN}")
+                    print(f"False Negatives (FN): {FN}")
+                    print(f"\nPrecision = TP / (TP + FP) = {TP} / ({TP} + {FP}) = {precision:.4f}")
 
-            precision,recall,specificity,f05,mcc = calculate_all_metrics(y_true,y_pred)
-            if precision is not None and precision>=0.75:
-                # i want to add the preoperty "good_model" = 1 to best_for_stock[stock]
-                best_for_stock[stock] = best_for_stock[stock] + (1,precision,) #TO KEEP THE DATA AS A TUPLE
-            elif precision is None:
-                best_for_stock[stock] = best_for_stock[stock] + (0,-1,)
-            else:
-                best_for_stock[stock] = best_for_stock[stock] + (-1,precision,)
-            #print(f"precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)} : {precision:.2%} | Specificity: {specificity:.2%} | Recall: {recall:.2%} | MCC: {mcc:.2f}")
-            
+                precision,recall,specificity,f05,mcc = calculate_all_metrics(y_true,y_pred)
+                if precision is None:
+                    print(f"Precision is None for {stock}, extending cutoff window to 12 days.")
+                    extended_df_stock = original_df[original_df['Stock'] == stock].copy()
+                    extended_df_stock = extended_df_stock[extended_df_stock['Date'] > cutoff]
+                    extended_df_stock = extended_df_stock[extended_df_stock['Date'] <= cutoff + pd.Timedelta(days=12)]
+
+                    if not extended_df_stock.empty:
+                        y_true = extended_df_stock[TARGET]
+                        X = extended_df_stock[features_for_prediction]
+                        X_scaled = scaler.transform(X)
+                        y_pred = model.predict(X_scaled)
+                        precision, recall, specificity, f05, mcc = calculate_all_metrics(y_true, y_pred)
+                    else:
+                        print(f"No rows found for extended window either.")
+                if precision is not None and precision>=0.75:
+                    model_specs['good_model'] = 1
+                    model_specs['precision_after_cutoff'] = precision
+                elif precision is None:
+                    model_specs['good_model'] = 0
+                    model_specs['precision_after_cutoff'] = -1
+                else:
+                    model_specs['good_model'] = -1
+                    model_specs['precision_after_cutoff'] = precision
+                #print(f"precision on rows from cutoff {cutoff} TO CUTOFF+6days {cutoff+pd.Timedelta(days=6)} : {precision:.2%} | Specificity: {specificity:.2%} | Recall: {recall:.2%} | MCC: {mcc:.2f}")
+                
 
 
 output_data = {}
 
-if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
+"""if USE_THIS_SCRIPT_FOR_METADATA_GENERATION:
     for stock, (best_model, best_prec, best_spec,best_recall,features_id, std_precision_by_time,init_percentage_of_1s,min_precision_by_month,min_precision_by_time, std_precision_by_month,training_length,prec_training,testing_length,number_of_red_slopes_in_test,
                 number_of_red_slopes_in_train,train_redness_index,test_redness_index,subset,good,live_precision) in best_for_stock.items():
         output_data[stock] = {
@@ -527,7 +587,11 @@ else:
             "test_redness_index": test_redness_index,
             "train_redness_index": train_redness_index,
             "subset": subset          # a list that is already JSON serializable
-        }
+        }"""
+# with open("models_to_use.json", "w") as f:
+#     json.dump(output_data, f, indent=4, default=str)
+# print("Data saved to models_to_use.json")
 with open("models_to_use.json", "w") as f:
-    json.dump(output_data, f, indent=4, default=str)
-print("Data saved to models_to_use.json")
+    json.dump(best_for_stock, f, indent=4, default=str)
+
+print("All satisfying models saved; metadata written to all_models_to_use.json")

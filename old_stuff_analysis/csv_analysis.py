@@ -8,24 +8,30 @@ from sklearn.preprocessing import LabelEncoder
 
 df = pd.read_csv(f"old_stuff_analysis/all_models_to_csv.csv")
 df = df.drop_duplicates()
+#shuffle the DataFrame
+df = df.sample(frac=1).reset_index(drop=True)
 target_column = "good_model"
 
-df = pd.get_dummies(df, columns=["Model_type", "Model","Ticker"], prefix=["Model_type", "Model","Ticker"])
+#df = df.drop(columns = ["Ticker"])
+df = pd.get_dummies(df, columns=["Model_type", "Model"], prefix=["Model_type", "Model"])
 
 feature_columns = [col for col in df.columns if col not in ["Ticker", target_column]]
 df = df.dropna(subset=[target_column])  # Drop rows where target is NaN
 df[feature_columns] = df[feature_columns].apply(pd.to_numeric, errors='coerce')
+print("FD_1 value counts:")
+print(df['FD_1'].value_counts(dropna=False))
 print("length of df before dropping none  : ",len(df))
 df = df.dropna()  # Drop remaining NaNs
 print("length of df after dropping none  : ",len(df))
-
+print("FD_1 value counts:")
+print(df['FD_1'].value_counts(dropna=False))
 X = df[feature_columns]
 print("length of X : ",len(X))
 print("colomns of X : ",X.columns)
 y = df[target_column]
 
 # Train Decision Tree Classifier
-clf = DecisionTreeClassifier(max_depth=3)  # Limit depth for better interpretability
+clf = DecisionTreeClassifier(max_depth=3,min_samples_leaf=10)  # Limit depth for better interpretability
 clf.fit(X, y)
 
 # Plot the decision tree
@@ -56,7 +62,7 @@ print("n_pos = ",n_pos)
 print("n_neg = ",n_neg)
 print("n_zero = ",n_zero)
 # How many zeros we want to keep
-n_zero_to_keep = n_neg - n_pos
+n_zero_to_keep = int((n_neg - n_pos)*0.9)
 n_zero_to_drop = n_zero - n_zero_to_keep
 print("n_zero_to_keep = ",n_zero_to_keep)
 print("n_zero_to_drop = ",n_zero_to_drop)
@@ -85,7 +91,7 @@ df_filtered = df_filtered[df_filtered[target_column] != 0]
 df_filtered.to_csv("old_stuff_analysis/csv_without_0.csv", index=False)
 X_filtered = df_filtered[feature_columns]
 y_filtered = df_filtered[target_column]
-clf_filtered = DecisionTreeClassifier(max_depth=2, min_samples_leaf=4)
+clf_filtered = DecisionTreeClassifier(max_depth=2, min_samples_leaf=8)
 clf_filtered.fit(X_filtered, y_filtered)
 plt.figure(figsize=(20, 10))
 tree.plot_tree(clf_filtered, feature_names=feature_columns, class_names=["-1", "1"], filled=True, rounded=True)
@@ -105,7 +111,7 @@ for sample_size in range(1,14):
         selected_features = random.sample(list(feature_columns), sample_size)
         X_selected_train = df_filtered[selected_features]
         # Create a new instance for each iteration
-        model = DecisionTreeClassifier(max_depth=4, min_samples_leaf=7)
+        model = DecisionTreeClassifier(max_depth=4, min_samples_leaf=13)
         model.fit(X_selected_train, y_filtered)
         y_pred = model.predict(X_selected_train)
         precision = precision_score(y_filtered, y_pred, zero_division=0)
